@@ -5,10 +5,13 @@ import { teamsApiService } from "../services/api";
 import { TeamList } from "../components/TeamList";
 import { TeamForm } from "../components/TeamForm";
 import { ConfirmDialog } from "@/shared/components/ConfirmDialog";
+import { useAuth } from "@/shared/contexts/AuthContext";
 
 const PAGE_SIZE = 9;
 
 export const TeamContainer = () => {
+  const { role } = useAuth();
+  const canEdit = role === "admin" || role === "superadmin";
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingTeam, setEditingTeam] = useState<Team | undefined>();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -91,19 +94,21 @@ export const TeamContainer = () => {
         teams={teams}
         isLoading={isLoading}
         error={error}
-        onCreate={handleCreate}
-        onEdit={handleEdit}
-        onDelete={handleDelete}
+        onCreate={canEdit ? handleCreate : undefined}
+        onEdit={canEdit ? handleEdit : undefined}
+        onDelete={canEdit ? handleDelete : undefined}
         page={page}
         total={total}
         pageSize={PAGE_SIZE}
         onPageChange={setPage}
       />
-      <TeamForm
-        team={editingTeam}
-        isOpen={isFormOpen}
-        onClose={handleCloseForm}
-      />
+      {canEdit && (
+        <TeamForm
+          team={editingTeam}
+          isOpen={isFormOpen}
+          onClose={handleCloseForm}
+        />
+      )}
       <ConfirmDialog
         isOpen={deleteDialogOpen}
         onClose={handleCloseDeleteDialog}

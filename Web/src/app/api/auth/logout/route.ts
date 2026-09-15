@@ -1,8 +1,30 @@
 import { NextResponse } from "next/server";
-import { SESSION_COOKIE } from "@/shared/auth/session";
+import { cookies } from "next/headers";
+import {
+  ACCESS_TOKEN_COOKIE,
+  REFRESH_TOKEN_COOKIE,
+} from "@/shared/auth/session";
 
 export async function POST() {
+  const apiUrl = process.env.API_URL;
+  const cookieStore = await cookies();
+  const refreshToken = cookieStore.get(REFRESH_TOKEN_COOKIE)?.value;
+
+  if (apiUrl && refreshToken) {
+    try {
+      await fetch(`${apiUrl}/auth/logout`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ refresh_token: refreshToken }),
+        cache: "no-store",
+      });
+    } catch {
+      // si la API no responde, igual cerramos la sesión localmente
+    }
+  }
+
   const response = NextResponse.json({ ok: true });
-  response.cookies.delete(SESSION_COOKIE);
+  response.cookies.delete(ACCESS_TOKEN_COOKIE);
+  response.cookies.delete(REFRESH_TOKEN_COOKIE);
   return response;
 }

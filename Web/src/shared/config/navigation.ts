@@ -7,6 +7,7 @@ import {
   Landmark,
   LayoutDashboard,
   Megaphone,
+  Shield,
   Star,
   TrendingUp,
   Trophy,
@@ -14,11 +15,14 @@ import {
   Users,
   type LucideIcon,
 } from "lucide-react";
+import type { Role } from "@/shared/auth/session";
 
 export interface NavItem {
   readonly href: string;
   readonly label: string;
   readonly icon: LucideIcon;
+  /** Si se omite, el item es visible para cualquier rol autenticado */
+  readonly roles?: readonly Role[];
 }
 
 export interface NavGroup {
@@ -40,6 +44,7 @@ export const navGroups: readonly NavGroup[] = [
       { href: "/coaches", label: "Entrenadores", icon: Megaphone },
       { href: "/matches", label: "Partidos", icon: Flag },
       { href: "/stadiums", label: "Estadios", icon: Landmark },
+      { href: "/users", label: "Usuarios", icon: Shield, roles: ["superadmin"] },
     ],
   },
   {

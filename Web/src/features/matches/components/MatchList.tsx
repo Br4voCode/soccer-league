@@ -30,9 +30,9 @@ interface MatchListProps {
   readonly matches: Match[];
   readonly isLoading: boolean;
   readonly error: Error | null;
-  readonly onCreate: () => void;
-  readonly onEdit: (match: Match) => void;
-  readonly onDelete: (id: number) => void;
+  readonly onCreate?: () => void;
+  readonly onEdit?: (match: Match) => void;
+  readonly onDelete?: (id: number) => void;
   readonly page: number;
   readonly total: number;
   readonly pageSize: number;
@@ -85,10 +85,12 @@ export function MatchList({
                 </SelectContent>
               </Select>
             </Field>
-            <Button onClick={onCreate}>
-              <Plus />
-              Nuevo partido
-            </Button>
+            {onCreate && (
+              <Button onClick={onCreate}>
+                <Plus />
+                Nuevo partido
+              </Button>
+            )}
           </>
         }
       />
@@ -101,9 +103,11 @@ export function MatchList({
         isEmpty={matches.length === 0}
         emptyMessage="No hay partidos registrados"
         emptyAction={
-          <Button size="sm" onClick={onCreate}>
-            Crear primer partido
-          </Button>
+          onCreate && (
+            <Button size="sm" onClick={onCreate}>
+              Crear primer partido
+            </Button>
+          )
         }
         footer={
           <Pagination
@@ -149,8 +153,8 @@ export function MatchList({
             </TableCell>
             <TableCell className="relative text-right">
               <RowActions
-                onEdit={() => onEdit(match)}
-                onDelete={() => onDelete(match.id)}
+                onEdit={onEdit ? () => onEdit(match) : undefined}
+                onDelete={onDelete ? () => onDelete(match.id) : undefined}
               />
             </TableCell>
           </TableRow>

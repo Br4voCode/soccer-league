@@ -17,14 +17,25 @@ import {
   useSidebar,
 } from "@/shared/components/ui/sidebar";
 import { navGroups } from "@/shared/config/navigation";
+import { useAuth } from "@/shared/contexts/AuthContext";
 
 export const AppSidebar = () => {
   const pathname = usePathname();
   const { isMobile, setOpenMobile } = useSidebar();
+  const { role } = useAuth();
 
   const closeOnNavigate = () => {
     if (isMobile) setOpenMobile(false);
   };
+
+  const visibleGroups = navGroups
+    .map((group) => ({
+      ...group,
+      items: group.items.filter(
+        (item) => !item.roles || (role && item.roles.includes(role)),
+      ),
+    }))
+    .filter((group) => group.items.length > 0);
 
   return (
     <Sidebar collapsible="icon">
@@ -49,7 +60,7 @@ export const AppSidebar = () => {
       </SidebarHeader>
 
       <SidebarContent className="group-data-[collapsible=icon]:overflow-y-auto">
-        {navGroups.map((group) => (
+        {visibleGroups.map((group) => (
           <SidebarGroup key={group.label}>
             <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
             <SidebarGroupContent>

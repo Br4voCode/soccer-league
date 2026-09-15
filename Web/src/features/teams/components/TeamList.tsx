@@ -23,9 +23,9 @@ interface TeamListProps {
   readonly teams: Team[];
   readonly isLoading: boolean;
   readonly error: Error | null;
-  readonly onCreate: () => void;
-  readonly onEdit: (team: Team) => void;
-  readonly onDelete: (id: number) => void;
+  readonly onCreate?: () => void;
+  readonly onEdit?: (team: Team) => void;
+  readonly onDelete?: (id: number) => void;
   readonly page: number;
   readonly total: number;
   readonly pageSize: number;
@@ -50,10 +50,12 @@ export function TeamList({
         title="Equipos"
         description="Administra los clubes participantes y sus plantillas"
         actions={
-          <Button onClick={onCreate}>
-            <Plus />
-            Nuevo equipo
-          </Button>
+          onCreate && (
+            <Button onClick={onCreate}>
+              <Plus />
+              Nuevo equipo
+            </Button>
+          )
         }
       />
 
@@ -65,9 +67,11 @@ export function TeamList({
         isEmpty={teams.length === 0}
         emptyMessage="No hay equipos registrados"
         emptyAction={
-          <Button size="sm" onClick={onCreate}>
-            Crear primer equipo
-          </Button>
+          onCreate && (
+            <Button size="sm" onClick={onCreate}>
+              Crear primer equipo
+            </Button>
+          )
         }
         footer={
           <Pagination
@@ -111,8 +115,8 @@ export function TeamList({
             </TableCell>
             <TableCell className="relative text-right">
               <RowActions
-                onEdit={() => onEdit(team)}
-                onDelete={() => onDelete(team.id)}
+                onEdit={onEdit ? () => onEdit(team) : undefined}
+                onDelete={onDelete ? () => onDelete(team.id) : undefined}
               />
             </TableCell>
           </TableRow>

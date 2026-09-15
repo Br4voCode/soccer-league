@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { cookies } from "next/headers";
 import { RootProviders } from "./providers";
-import { SESSION_COOKIE, verifySessionToken } from "@/shared/auth/session";
+import { ACCESS_TOKEN_COOKIE, verifyAccessToken } from "@/shared/auth/session";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -16,14 +16,17 @@ export default async function RootLayout({
   readonly children: ReactNode;
 }) {
   const cookieStore = await cookies();
-  const isAuthenticated = await verifySessionToken(
-    cookieStore.get(SESSION_COOKIE)?.value,
+  const claims = await verifyAccessToken(
+    cookieStore.get(ACCESS_TOKEN_COOKIE)?.value,
   );
 
   return (
     <html lang="es" suppressHydrationWarning>
       <body>
-        <RootProviders isAuthenticated={isAuthenticated}>
+        <RootProviders
+          isAuthenticated={Boolean(claims)}
+          role={claims?.role ?? null}
+        >
           {children}
         </RootProviders>
       </body>

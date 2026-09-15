@@ -1,8 +1,28 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { SESSION_COOKIE, verifySessionToken } from "@/shared/auth/session";
+import {
+  ACCESS_TOKEN_COOKIE,
+  ACCESS_TOKEN_MAX_AGE,
+  REFRESH_TOKEN_COOKIE,
+  REFRESH_TOKEN_MAX_AGE,
+} from "@/shared/auth/session";
+import { refreshAccessToken } from "@/shared/auth/tokens";
 
 const METHODS_WITH_BODY = new Set(["POST", "PUT", "PATCH"]);
 const EMPTY_BODY_STATUS = new Set([204, 205, 304]);
+
+async function callApi(target: string, request: NextRequest, accessToken: string) {
+  return fetch(target, {
+    method: request.method,
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: METHODS_WITH_BODY.has(request.method)
+      ? await request.clone().text()
+      : undefined,
+    cache: "no-store",
+  });
+}
 
 async function handler(
   request: NextRequest,
@@ -16,10 +36,9 @@ async function handler(
     );
   }
 
-  const isAuthenticated = await verifySessionToken(
-    request.cookies.get(SESSION_COOKIE)?.value,
-  );
-  if (!isAuthenticated) {
+  const accessToken = request.cookies.get(ACCESS_TOKEN_COOKIE)?.value;
+  const refreshToken = request.cookies.get(REFRESH_TOKEN_COOKIE)?.value;
+  if (!accessToken && !refreshToken) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 
@@ -27,15 +46,20 @@ async function handler(
   const target = `${apiUrl}/${path.join("/")}${request.nextUrl.search}`;
 
   let response: Response;
+  let renewedCookies: { access: string; refresh: string } | null = null;
   try {
-    response = await fetch(target, {
-      method: request.method,
-      headers: { "Content-Type": "application/json" },
-      body: METHODS_WITH_BODY.has(request.method)
-        ? await request.text()
-        : undefined,
-      cache: "no-store",
-    });
+    response = accessToken
+      ? await callApi(target, request, accessToken)
+      : new Response(null, { status: 401 });
+
+    if (response.status === 401) {
+      const renewed = await refreshAccessToken(refreshToken);
+      if (!renewed) {
+        return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+      }
+      renewedCookies = { access: renewed.access_token, refresh: renewed.refresh_token };
+      response = await callApi(target, request, renewed.access_token);
+    }
   } catch {
     return NextResponse.json(
       { error: "No se pudo contactar con la API" },
@@ -43,18 +67,38 @@ async function handler(
     );
   }
 
+  let nextResponse: NextResponse;
   if (EMPTY_BODY_STATUS.has(response.status)) {
-    return new NextResponse(null, { status: response.status });
+    nextResponse = new NextResponse(null, { status: response.status });
+  } else {
+    const body = await response.text();
+    nextResponse = new NextResponse(body || null, {
+      status: response.status,
+      headers: {
+        "Content-Type":
+          response.headers.get("content-type") ?? "application/json",
+      },
+    });
   }
 
-  const body = await response.text();
-  return new NextResponse(body || null, {
-    status: response.status,
-    headers: {
-      "Content-Type":
-        response.headers.get("content-type") ?? "application/json",
-    },
-  });
+  if (renewedCookies) {
+    nextResponse.cookies.set(ACCESS_TOKEN_COOKIE, renewedCookies.access, {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      path: "/",
+      maxAge: ACCESS_TOKEN_MAX_AGE,
+    });
+    nextResponse.cookies.set(REFRESH_TOKEN_COOKIE, renewedCookies.refresh, {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      path: "/",
+      maxAge: REFRESH_TOKEN_MAX_AGE,
+    });
+  }
+
+  return nextResponse;
 }
 
 export {

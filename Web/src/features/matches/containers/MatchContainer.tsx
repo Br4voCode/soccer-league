@@ -8,10 +8,13 @@ import { seasonsApiService } from "../../seasons/services/api";
 import { MatchList } from "../components/MatchList";
 import { MatchForm } from "../components/MatchForm";
 import { ConfirmDialog } from "@/shared/components/ConfirmDialog";
+import { useAuth } from "@/shared/contexts/AuthContext";
 
 const PAGE_SIZE = 10;
 
 export const MatchContainer = () => {
+  const { role } = useAuth();
+  const canEdit = role === "admin" || role === "superadmin";
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingMatch, setEditingMatch] = useState<Match | undefined>();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -118,9 +121,9 @@ export const MatchContainer = () => {
         matches={matchesWithNames}
         isLoading={isLoading}
         error={error instanceof Error ? error : null}
-        onCreate={handleCreate}
-        onEdit={handleEdit}
-        onDelete={handleDelete}
+        onCreate={canEdit ? handleCreate : undefined}
+        onEdit={canEdit ? handleEdit : undefined}
+        onDelete={canEdit ? handleDelete : undefined}
         page={page}
         total={total}
         pageSize={PAGE_SIZE}
@@ -129,11 +132,13 @@ export const MatchContainer = () => {
         selectedSeason={selectedSeason}
         onSeasonChange={handleSeasonChange}
       />
-      <MatchForm
-        match={editingMatch}
-        isOpen={isFormOpen}
-        onClose={handleCloseForm}
-      />
+      {canEdit && (
+        <MatchForm
+          match={editingMatch}
+          isOpen={isFormOpen}
+          onClose={handleCloseForm}
+        />
+      )}
       <ConfirmDialog
         isOpen={deleteDialogOpen}
         onClose={handleCloseDeleteDialog}

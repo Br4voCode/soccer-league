@@ -45,8 +45,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/shared/components/ui/select";
+import { useAuth } from "@/shared/contexts/AuthContext";
 
 export const MatchDetailContainer = () => {
+  const { role } = useAuth();
+  const canEdit = role === "admin" || role === "superadmin";
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -211,10 +214,12 @@ export const MatchDetailContainer = () => {
               </p>
             )}
           </div>
-          <Button onClick={handleAddStat} size="sm" disabled={!match.disputed}>
-            <Plus />
-            Agregar
-          </Button>
+          {canEdit && (
+            <Button onClick={handleAddStat} size="sm" disabled={!match.disputed}>
+              <Plus />
+              Agregar
+            </Button>
+          )}
         </CardHeader>
         {deleteStatMutation.isError && (
           <div className="px-6 pt-4 text-sm text-destructive font-medium">
@@ -274,8 +279,10 @@ export const MatchDetailContainer = () => {
                         <TableCell className="text-center font-mono">{stat.tackles}</TableCell>
                         <TableCell className="text-right">
                           <RowActions
-                            onEdit={() => handleEditStat(stat)}
-                            onDelete={() => handleDeleteStat(stat.id)}
+                            onEdit={canEdit ? () => handleEditStat(stat) : undefined}
+                            onDelete={
+                              canEdit ? () => handleDeleteStat(stat.id) : undefined
+                            }
                           />
                         </TableCell>
                       </TableRow>
