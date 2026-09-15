@@ -14,11 +14,14 @@ import { playersApiService } from "../services/api";
 import { teamsApiService } from "@/features/teams/services/api";
 import { TeamPickerDialog } from "@/features/teams/components/TeamPickerDialog";
 import { Button } from "@/shared/components/ui/button";
+import { useAuth } from "@/shared/contexts/AuthContext";
 
 const PAGE_SIZE = 10;
 const COLUMNS = ["#", "Nombre", "Equipo", "Posición", "Años en equipo"];
 
 export const PlayerGlobalList = () => {
+  const { role } = useAuth();
+  const canEdit = role === "admin" || role === "superadmin";
   const [page, setPage] = useState(1);
   const [isPickerOpen, setIsPickerOpen] = useState(false);
   const router = useRouter();
@@ -51,10 +54,12 @@ export const PlayerGlobalList = () => {
         title="Jugadores"
         description="Listado global de jugadores registrados en la liga"
         actions={
-          <Button onClick={() => setIsPickerOpen(true)}>
-            <Plus />
-            Nuevo jugador
-          </Button>
+          canEdit && (
+            <Button onClick={() => setIsPickerOpen(true)}>
+              <Plus />
+              Nuevo jugador
+            </Button>
+          )
         }
       />
 

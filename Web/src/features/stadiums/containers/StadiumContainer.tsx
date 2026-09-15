@@ -5,10 +5,13 @@ import { stadiumsApiService } from "../services/api";
 import { StadiumList } from "../components/StadiumList";
 import { StadiumForm } from "../components/StadiumForm";
 import { ConfirmDialog } from "@/shared/components/ConfirmDialog";
+import { useAuth } from "@/shared/contexts/AuthContext";
 
 const PAGE_SIZE = 9;
 
 export const StadiumContainer = () => {
+  const { role } = useAuth();
+  const canEdit = role === "admin" || role === "superadmin";
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingStadium, setEditingStadium] = useState<Stadium | undefined>();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -79,19 +82,21 @@ export const StadiumContainer = () => {
         stadiums={stadiums}
         isLoading={isLoading}
         error={error instanceof Error ? error : null}
-        onCreate={handleCreate}
-        onEdit={handleEdit}
-        onDelete={handleDelete}
+        onCreate={canEdit ? handleCreate : undefined}
+        onEdit={canEdit ? handleEdit : undefined}
+        onDelete={canEdit ? handleDelete : undefined}
         page={page}
         total={total}
         pageSize={PAGE_SIZE}
         onPageChange={setPage}
       />
-      <StadiumForm
-        stadium={editingStadium}
-        isOpen={isFormOpen}
-        onClose={handleCloseForm}
-      />
+      {canEdit && (
+        <StadiumForm
+          stadium={editingStadium}
+          isOpen={isFormOpen}
+          onClose={handleCloseForm}
+        />
+      )}
       <ConfirmDialog
         isOpen={deleteDialogOpen}
         onClose={handleCloseDeleteDialog}

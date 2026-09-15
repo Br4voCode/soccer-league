@@ -16,11 +16,9 @@ cp .env.example .env
 | Variable | Ámbito | Descripción |
 | --- | --- | --- |
 | `API_URL` | Servidor | URL base de la API (Go) |
-| `ADMIN_USER` | Servidor | Usuario del portal |
-| `ADMIN_PASS` | Servidor | Contraseña del portal |
-| `AUTH_SECRET` | Servidor | Clave HMAC-SHA256 para firmar la cookie de sesión |
+| `JWT_SECRET` | Servidor | Clave HMAC-SHA256 para verificar los JWT — debe ser idéntica a `JWT_SECRET` en la API Go, que es quien los emite |
 
-Genera `AUTH_SECRET` con:
+Genera `JWT_SECRET` con:
 
 ```bash
 node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
@@ -51,5 +49,12 @@ src/
 
 ## Autenticación
 
-Las credenciales se validan en `src/app/api/auth/login`, que responde con una cookie `httpOnly`
-firmada con `AUTH_SECRET`. `src/proxy.ts` verifica la firma y redirige a `/login` las rutas no públicas.
+Los usuarios reales (con rol `superadmin`, `admin` o `visitante`) viven en la base de datos de
+la API Go, no en este proyecto. `src/app/api/auth/login` reenvía las credenciales a
+`POST ${API_URL}/auth/login`; si son válidas, Go responde con un access token (JWT, ~15 min) y
+un refresh token (opaco, ~7 días), y esta ruta los guarda en dos cookies `httpOnly`.
+
+`src/shared/auth/session.ts` solo **verifica** el JWT (misma `JWT_SECRET` que Go, nunca lo firma
+aquí). `src/proxy.ts` usa esa verificación para redirigir a `/login` las rutas no públicas.
+`src/app/api/backend/[...path]/route.ts` reenvía el access token como `Authorization: Bearer`
+a la API Go en cada llamada, y si expiró, pide uno nuevo con el refresh token antes de reintentar.

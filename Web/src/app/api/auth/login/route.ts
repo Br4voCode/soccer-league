@@ -1,27 +1,17 @@
 import { NextResponse } from "next/server";
 import {
-  SESSION_COOKIE,
-  SESSION_MAX_AGE,
-  createSessionToken,
+  ACCESS_TOKEN_COOKIE,
+  ACCESS_TOKEN_MAX_AGE,
+  REFRESH_TOKEN_COOKIE,
+  REFRESH_TOKEN_MAX_AGE,
 } from "@/shared/auth/session";
-
-const constantTimeEqual = (a: string, b: string) => {
-  if (a.length !== b.length) return false;
-
-  let diff = 0;
-  for (let i = 0; i < a.length; i++) {
-    diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  }
-  return diff === 0;
-};
+import type { TokenPair } from "@/shared/auth/tokens";
 
 export async function POST(request: Request) {
-  const adminUser = process.env.ADMIN_USER;
-  const adminPass = process.env.ADMIN_PASS;
-
-  if (!adminUser || !adminPass || !process.env.AUTH_SECRET) {
+  const apiUrl = process.env.API_URL;
+  if (!apiUrl || !process.env.JWT_SECRET) {
     return NextResponse.json(
-      { error: "Faltan ADMIN_USER, ADMIN_PASS o AUTH_SECRET en el servidor" },
+      { error: "Faltan API_URL o JWT_SECRET en el servidor" },
       { status: 500 },
     );
   }
@@ -33,24 +23,47 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Petición inválida" }, { status: 400 });
   }
 
-  const isValid =
-    constantTimeEqual(String(body?.user ?? ""), adminUser) &&
-    constantTimeEqual(String(body?.pass ?? ""), adminPass);
+  let apiResponse: Response;
+  try {
+    apiResponse = await fetch(`${apiUrl}/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email: String(body?.user ?? ""),
+        password: String(body?.pass ?? ""),
+      }),
+      cache: "no-store",
+    });
+  } catch {
+    return NextResponse.json(
+      { error: "No se pudo contactar con la API" },
+      { status: 502 },
+    );
+  }
 
-  if (!isValid) {
+  if (!apiResponse.ok) {
     return NextResponse.json(
       { error: "Credenciales incorrectas" },
       { status: 401 },
     );
   }
 
-  const response = NextResponse.json({ ok: true });
-  response.cookies.set(SESSION_COOKIE, await createSessionToken(adminUser), {
+  const tokens = (await apiResponse.json()) as TokenPair;
+
+  const response = NextResponse.json({ ok: true, role: tokens.role });
+  response.cookies.set(ACCESS_TOKEN_COOKIE, tokens.access_token, {
     httpOnly: true,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
     path: "/",
-    maxAge: SESSION_MAX_AGE,
+    maxAge: ACCESS_TOKEN_MAX_AGE,
+  });
+  response.cookies.set(REFRESH_TOKEN_COOKIE, tokens.refresh_token, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    maxAge: REFRESH_TOKEN_MAX_AGE,
   });
 
   return response;

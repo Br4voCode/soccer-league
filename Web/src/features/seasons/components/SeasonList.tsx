@@ -36,9 +36,9 @@ interface SeasonListProps {
   readonly seasons: Season[];
   readonly isLoading: boolean;
   readonly error: Error | null;
-  readonly onCreate: () => void;
-  readonly onEdit: (season: Season) => void;
-  readonly onDelete: (id: number) => void;
+  readonly onCreate?: () => void;
+  readonly onEdit?: (season: Season) => void;
+  readonly onDelete?: (id: number) => void;
 }
 
 export function SeasonList({
@@ -55,10 +55,12 @@ export function SeasonList({
         title="Temporadas"
         description="Define los periodos de competición de la liga"
         actions={
-          <Button onClick={onCreate}>
-            <Plus />
-            Nueva temporada
-          </Button>
+          onCreate && (
+            <Button onClick={onCreate}>
+              <Plus />
+              Nueva temporada
+            </Button>
+          )
         }
       />
 
@@ -70,9 +72,11 @@ export function SeasonList({
         isEmpty={seasons.length === 0}
         emptyMessage="No hay temporadas registradas"
         emptyAction={
-          <Button size="sm" onClick={onCreate}>
-            Crear primera temporada
-          </Button>
+          onCreate && (
+            <Button size="sm" onClick={onCreate}>
+              Crear primera temporada
+            </Button>
+          )
         }
       >
         {seasons.map((season) => (
@@ -88,8 +92,8 @@ export function SeasonList({
             </TableCell>
             <TableCell className="text-right">
               <RowActions
-                onEdit={() => onEdit(season)}
-                onDelete={() => onDelete(season.id)}
+                onEdit={onEdit ? () => onEdit(season) : undefined}
+                onDelete={onDelete ? () => onDelete(season.id) : undefined}
               />
             </TableCell>
           </TableRow>

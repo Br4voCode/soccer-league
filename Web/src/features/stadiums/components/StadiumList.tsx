@@ -15,9 +15,9 @@ interface StadiumListProps {
   readonly stadiums: Stadium[];
   readonly isLoading: boolean;
   readonly error: Error | null;
-  readonly onCreate: () => void;
-  readonly onEdit: (stadium: Stadium) => void;
-  readonly onDelete: (id: number) => void;
+  readonly onCreate?: () => void;
+  readonly onEdit?: (stadium: Stadium) => void;
+  readonly onDelete?: (id: number) => void;
   readonly page: number;
   readonly total: number;
   readonly pageSize: number;
@@ -42,10 +42,12 @@ export function StadiumList({
         title="Estadios"
         description="Gestiona las sedes donde se disputan los partidos"
         actions={
-          <Button onClick={onCreate}>
-            <Plus />
-            Nuevo estadio
-          </Button>
+          onCreate && (
+            <Button onClick={onCreate}>
+              <Plus />
+              Nuevo estadio
+            </Button>
+          )
         }
       />
 
@@ -57,9 +59,11 @@ export function StadiumList({
         isEmpty={stadiums.length === 0}
         emptyMessage="No hay estadios registrados"
         emptyAction={
-          <Button size="sm" onClick={onCreate}>
-            Crear primer estadio
-          </Button>
+          onCreate && (
+            <Button size="sm" onClick={onCreate}>
+              Crear primer estadio
+            </Button>
+          )
         }
         footer={
           <Pagination
@@ -78,8 +82,8 @@ export function StadiumList({
             </TableCell>
             <TableCell className="text-right">
               <RowActions
-                onEdit={() => onEdit(stadium)}
-                onDelete={() => onDelete(stadium.id)}
+                onEdit={onEdit ? () => onEdit(stadium) : undefined}
+                onDelete={onDelete ? () => onDelete(stadium.id) : undefined}
               />
             </TableCell>
           </TableRow>

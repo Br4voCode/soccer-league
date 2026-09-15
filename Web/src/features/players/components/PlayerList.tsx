@@ -18,6 +18,7 @@ import { RowActions } from "@/shared/components/RowActions";
 import { playersApiService } from "../services/api";
 import { PlayerForm } from "./PlayerForm";
 import type { Player } from "../types";
+import { useAuth } from "@/shared/contexts/AuthContext";
 
 interface PlayerListProps {
   readonly teamId: number;
@@ -32,7 +33,9 @@ export const PlayerList = ({
   autoCreate = false,
   onFormClose,
 }: PlayerListProps) => {
-  const [isFormOpen, setIsFormOpen] = useState(autoCreate);
+  const { role } = useAuth();
+  const canEdit = role === "admin" || role === "superadmin";
+  const [isFormOpen, setIsFormOpen] = useState(autoCreate && canEdit);
   const [editingPlayer, setEditingPlayer] = useState<Player | undefined>();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [playerToDelete, setPlayerToDelete] = useState<number | undefined>();
@@ -71,10 +74,12 @@ export const PlayerList = ({
             {players.length} en plantilla
           </p>
         </div>
-        <Button size="sm" onClick={handleCreate}>
-          <Plus />
-          Nuevo jugador
-        </Button>
+        {canEdit && (
+          <Button size="sm" onClick={handleCreate}>
+            <Plus />
+            Nuevo jugador
+          </Button>
+        )}
       </div>
 
       <div className="overflow-x-auto rounded-lg border">
@@ -115,8 +120,10 @@ export const PlayerList = ({
                   </TableCell>
                   <TableCell className="text-right">
                     <RowActions
-                      onEdit={() => handleEdit(player)}
-                      onDelete={() => handleDelete(player.id)}
+                      onEdit={canEdit ? () => handleEdit(player) : undefined}
+                      onDelete={
+                        canEdit ? () => handleDelete(player.id) : undefined
+                      }
                     />
                   </TableCell>
                 </TableRow>
@@ -126,15 +133,17 @@ export const PlayerList = ({
         </Table>
       </div>
 
-      <PlayerForm
-        teamId={teamId}
-        player={editingPlayer}
-        isOpen={isFormOpen}
-        onClose={() => {
-          setIsFormOpen(false);
-          onFormClose?.();
-        }}
-      />
+      {canEdit && (
+        <PlayerForm
+          teamId={teamId}
+          player={editingPlayer}
+          isOpen={isFormOpen}
+          onClose={() => {
+            setIsFormOpen(false);
+            onFormClose?.();
+          }}
+        />
+      )}
 
       <ConfirmDialog
         isOpen={deleteDialogOpen}
