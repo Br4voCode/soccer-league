@@ -54,6 +54,16 @@ type Playerstat struct {
 	GoalsConceded   sql.NullInt32
 }
 
+type Refreshtoken struct {
+	ID        int64
+	UserID    int64
+	TokenHash string
+	ExpiresAt time.Time
+	RotatedAt sql.NullTime
+	RevokedAt sql.NullTime
+	CreatedAt time.Time
+}
+
 type Season struct {
 	ID        int64
 	StartDate sql.NullTime
@@ -74,4 +84,12 @@ type Team struct {
 	Color               sql.NullString
 	ChampionshipsPlayed sql.NullInt32
 	ChampionshipsWon    sql.NullInt32
+}
+
+type User struct {
+	ID           int64
+	Email        string
+	PasswordHash string
+	Role         string
+	CreatedAt    time.Time
 }
