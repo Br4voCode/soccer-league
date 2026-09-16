@@ -11,6 +11,28 @@ import (
 	"time"
 )
 
+const countUsers = `-- name: CountUsers :one
+SELECT COUNT(*) FROM Users
+`
+
+func (q *Queries) CountUsers(ctx context.Context) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countUsers)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const countUsersByRole = `-- name: CountUsersByRole :one
+SELECT COUNT(*) FROM Users WHERE role = $1
+`
+
+func (q *Queries) CountUsersByRole(ctx context.Context, role string) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countUsersByRole, role)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createCoach = `-- name: CreateCoach :one
 WITH ins_fut AS (
     INSERT INTO Footballer (team_id, name, number, years_in_team)
@@ -189,6 +211,22 @@ func (q *Queries) CreatePlayerStat(ctx context.Context, arg CreatePlayerStatPara
 	return id, err
 }
 
+const createRefreshToken = `-- name: CreateRefreshToken :exec
+INSERT INTO RefreshToken (user_id, token_hash, expires_at)
+VALUES ($1, $2, $3)
+`
+
+type CreateRefreshTokenParams struct {
+	UserID    int64
+	TokenHash string
+	ExpiresAt time.Time
+}
+
+func (q *Queries) CreateRefreshToken(ctx context.Context, arg CreateRefreshTokenParams) error {
+	_, err := q.db.ExecContext(ctx, createRefreshToken, arg.UserID, arg.TokenHash, arg.ExpiresAt)
+	return err
+}
+
 const createSeason = `-- name: CreateSeason :one
 INSERT INTO Season (start_date, end_date)
 VALUES ($1, $2)
@@ -255,6 +293,31 @@ func (q *Queries) CreateTeam(ctx context.Context, arg CreateTeamParams) (int64, 
 	var id int64
 	err := row.Scan(&id)
 	return id, err
+}
+
+const createUser = `-- name: CreateUser :one
+INSERT INTO Users (email, password_hash, role)
+VALUES ($1, $2, $3)
+RETURNING id, email, password_hash, role, created_at
+`
+
+type CreateUserParams struct {
+	Email        string
+	PasswordHash string
+	Role         string
+}
+
+func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {
+	row := q.db.QueryRowContext(ctx, createUser, arg.Email, arg.PasswordHash, arg.Role)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Email,
+		&i.PasswordHash,
+		&i.Role,
+		&i.CreatedAt,
+	)
+	return i, err
 }
 
 const deleteCoachRecord = `-- name: DeleteCoachRecord :exec
@@ -327,6 +390,18 @@ DELETE FROM Team WHERE id = $1
 func (q *Queries) DeleteTeam(ctx context.Context, id int64) error {
 	_, err := q.db.ExecContext(ctx, deleteTeam, id)
 	return err
+}
+
+const deleteUser = `-- name: DeleteUser :execrows
+DELETE FROM Users WHERE id = $1
+`
+
+func (q *Queries) DeleteUser(ctx context.Context, id int64) (int64, error) {
+	result, err := q.db.ExecContext(ctx, deleteUser, id)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
 
 const getBestDefender = `-- name: GetBestDefender :many
@@ -455,7 +530,7 @@ type GetBestForwardRow struct {
 	GoalsConceded   interface{}
 }
 
-// Report 7: all-star team
+// Report 7: all-star team (1 portero, 4 defensas, 3 mediocampistas, 3 delanteros)
 func (q *Queries) GetBestForward(ctx context.Context, seasonID sql.NullInt64) ([]GetBestForwardRow, error) {
 	rows, err := q.db.QueryContext(ctx, getBestForward, seasonID)
 	if err != nil {
@@ -982,6 +1057,27 @@ func (q *Queries) GetPlayerStat(ctx context.Context, id int64) (Playerstat, erro
 	return i, err
 }
 
+const getRefreshTokenByHash = `-- name: GetRefreshTokenByHash :one
+SELECT id, user_id, token_hash, expires_at, rotated_at, revoked_at, created_at
+FROM RefreshToken
+WHERE token_hash = $1
+`
+
+func (q *Queries) GetRefreshTokenByHash(ctx context.Context, tokenHash string) (Refreshtoken, error) {
+	row := q.db.QueryRowContext(ctx, getRefreshTokenByHash, tokenHash)
+	var i Refreshtoken
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.TokenHash,
+		&i.ExpiresAt,
+		&i.RotatedAt,
+		&i.RevokedAt,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const getSeason = `-- name: GetSeason :one
 SELECT id, start_date, end_date FROM Season WHERE id = $1
 `
@@ -1107,6 +1203,40 @@ func (q *Queries) GetTeamStatus(ctx context.Context, arg GetTeamStatusParams) (G
 	return i, err
 }
 
+const getUser = `-- name: GetUser :one
+SELECT id, email, password_hash, role, created_at FROM Users WHERE id = $1
+`
+
+func (q *Queries) GetUser(ctx context.Context, id int64) (User, error) {
+	row := q.db.QueryRowContext(ctx, getUser, id)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Email,
+		&i.PasswordHash,
+		&i.Role,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const getUserByEmail = `-- name: GetUserByEmail :one
+SELECT id, email, password_hash, role, created_at FROM Users WHERE email = $1
+`
+
+func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error) {
+	row := q.db.QueryRowContext(ctx, getUserByEmail, email)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Email,
+		&i.PasswordHash,
+		&i.Role,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const listCoaches = `-- name: ListCoaches :many
 SELECT f.id, f.team_id, f.name, f.number, f.years_in_team,
        c.experience_years, c.championships_won
@@ -1134,56 +1264,6 @@ func (q *Queries) ListCoaches(ctx context.Context) ([]ListCoachesRow, error) {
 	var items []ListCoachesRow
 	for rows.Next() {
 		var i ListCoachesRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.TeamID,
-			&i.Name,
-			&i.Number,
-			&i.YearsInTeam,
-			&i.ExperienceYears,
-			&i.ChampionshipsWon,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const listCoachesByTeam = `-- name: ListCoachesByTeam :many
-SELECT f.id, f.team_id, f.name, f.number, f.years_in_team,
-       c.experience_years, c.championships_won
-FROM Footballer f
-JOIN Coach c ON c.footballer_id = f.id
-WHERE f.team_id = $1
-ORDER BY f.id
-`
-
-type ListCoachesByTeamRow struct {
-	ID               int64
-	TeamID           sql.NullInt64
-	Name             string
-	Number           sql.NullInt32
-	YearsInTeam      sql.NullInt32
-	ExperienceYears  sql.NullInt32
-	ChampionshipsWon sql.NullInt32
-}
-
-func (q *Queries) ListCoachesByTeam(ctx context.Context, teamID sql.NullInt64) ([]ListCoachesByTeamRow, error) {
-	rows, err := q.db.QueryContext(ctx, listCoachesByTeam, teamID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []ListCoachesByTeamRow
-	for rows.Next() {
-		var i ListCoachesByTeamRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.TeamID,
@@ -1243,6 +1323,56 @@ func (q *Queries) ListCoachesByExperience(ctx context.Context) ([]ListCoachesByE
 			&i.ExperienceYears,
 			&i.ChampionshipsWon,
 			&i.TeamName,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listCoachesByTeam = `-- name: ListCoachesByTeam :many
+SELECT f.id, f.team_id, f.name, f.number, f.years_in_team,
+       c.experience_years, c.championships_won
+FROM Footballer f
+JOIN Coach c ON c.footballer_id = f.id
+WHERE f.team_id = $1
+ORDER BY f.id
+`
+
+type ListCoachesByTeamRow struct {
+	ID               int64
+	TeamID           sql.NullInt64
+	Name             string
+	Number           sql.NullInt32
+	YearsInTeam      sql.NullInt32
+	ExperienceYears  sql.NullInt32
+	ChampionshipsWon sql.NullInt32
+}
+
+func (q *Queries) ListCoachesByTeam(ctx context.Context, teamID sql.NullInt64) ([]ListCoachesByTeamRow, error) {
+	rows, err := q.db.QueryContext(ctx, listCoachesByTeam, teamID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListCoachesByTeamRow
+	for rows.Next() {
+		var i ListCoachesByTeamRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.TeamID,
+			&i.Name,
+			&i.Number,
+			&i.YearsInTeam,
+			&i.ExperienceYears,
+			&i.ChampionshipsWon,
 		); err != nil {
 			return nil, err
 		}
@@ -2357,6 +2487,84 @@ func (q *Queries) ListTeams(ctx context.Context) ([]Team, error) {
 	return items, nil
 }
 
+const listUsers = `-- name: ListUsers :many
+SELECT id, email, password_hash, role, created_at
+FROM Users
+ORDER BY id
+LIMIT $1 OFFSET $2
+`
+
+type ListUsersParams struct {
+	Limit  int32
+	Offset int32
+}
+
+func (q *Queries) ListUsers(ctx context.Context, arg ListUsersParams) ([]User, error) {
+	rows, err := q.db.QueryContext(ctx, listUsers, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []User
+	for rows.Next() {
+		var i User
+		if err := rows.Scan(
+			&i.ID,
+			&i.Email,
+			&i.PasswordHash,
+			&i.Role,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const revokeRefreshToken = `-- name: RevokeRefreshToken :exec
+UPDATE RefreshToken SET revoked_at = now()
+WHERE token_hash = $1 AND revoked_at IS NULL
+`
+
+func (q *Queries) RevokeRefreshToken(ctx context.Context, tokenHash string) error {
+	_, err := q.db.ExecContext(ctx, revokeRefreshToken, tokenHash)
+	return err
+}
+
+const revokeUserRefreshTokens = `-- name: RevokeUserRefreshTokens :exec
+UPDATE RefreshToken SET revoked_at = now()
+WHERE user_id = $1 AND revoked_at IS NULL
+`
+
+func (q *Queries) RevokeUserRefreshTokens(ctx context.Context, userID int64) error {
+	_, err := q.db.ExecContext(ctx, revokeUserRefreshTokens, userID)
+	return err
+}
+
+const rotateRefreshToken = `-- name: RotateRefreshToken :one
+UPDATE RefreshToken
+SET rotated_at = COALESCE(rotated_at, now())
+WHERE token_hash = $1
+  AND revoked_at IS NULL
+  AND expires_at > now()
+  AND (rotated_at IS NULL OR rotated_at > now() - INTERVAL '30 seconds')
+RETURNING user_id
+`
+
+func (q *Queries) RotateRefreshToken(ctx context.Context, tokenHash string) (int64, error) {
+	row := q.db.QueryRowContext(ctx, rotateRefreshToken, tokenHash)
+	var user_id int64
+	err := row.Scan(&user_id)
+	return user_id, err
+}
+
 const updateCoachDetails = `-- name: UpdateCoachDetails :exec
 UPDATE Coach
 SET experience_years = $2, championships_won = $3
@@ -2583,4 +2791,27 @@ func (q *Queries) UpdateTeam(ctx context.Context, arg UpdateTeamParams) error {
 		arg.ChampionshipsWon,
 	)
 	return err
+}
+
+const updateUserRole = `-- name: UpdateUserRole :one
+UPDATE Users SET role = $2 WHERE id = $1
+RETURNING id, email, password_hash, role, created_at
+`
+
+type UpdateUserRoleParams struct {
+	ID   int64
+	Role string
+}
+
+func (q *Queries) UpdateUserRole(ctx context.Context, arg UpdateUserRoleParams) (User, error) {
+	row := q.db.QueryRowContext(ctx, updateUserRole, arg.ID, arg.Role)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Email,
+		&i.PasswordHash,
+		&i.Role,
+		&i.CreatedAt,
+	)
+	return i, err
 }

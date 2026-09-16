@@ -787,3 +787,59 @@ LEFT JOIN LATERAL (
 ) ag ON true
 WHERE m.away_team_id = $1
 ORDER BY m.match_date, m.id;
+
+-- name: CreateUser :one
+INSERT INTO Users (email, password_hash, role)
+VALUES ($1, $2, $3)
+RETURNING id, email, password_hash, role, created_at;
+
+-- name: GetUser :one
+SELECT id, email, password_hash, role, created_at FROM Users WHERE id = $1;
+
+-- name: GetUserByEmail :one
+SELECT id, email, password_hash, role, created_at FROM Users WHERE email = $1;
+
+-- name: ListUsers :many
+SELECT id, email, password_hash, role, created_at
+FROM Users
+ORDER BY id
+LIMIT $1 OFFSET $2;
+
+-- name: CountUsers :one
+SELECT COUNT(*) FROM Users;
+
+-- name: CountUsersByRole :one
+SELECT COUNT(*) FROM Users WHERE role = $1;
+
+-- name: UpdateUserRole :one
+UPDATE Users SET role = $2 WHERE id = $1
+RETURNING id, email, password_hash, role, created_at;
+
+-- name: DeleteUser :execrows
+DELETE FROM Users WHERE id = $1;
+
+-- name: CreateRefreshToken :exec
+INSERT INTO RefreshToken (user_id, token_hash, expires_at)
+VALUES ($1, $2, $3);
+
+-- name: RotateRefreshToken :one
+UPDATE RefreshToken
+SET rotated_at = COALESCE(rotated_at, now())
+WHERE token_hash = $1
+  AND revoked_at IS NULL
+  AND expires_at > now()
+  AND (rotated_at IS NULL OR rotated_at > now() - INTERVAL '30 seconds')
+RETURNING user_id;
+
+-- name: GetRefreshTokenByHash :one
+SELECT id, user_id, token_hash, expires_at, rotated_at, revoked_at, created_at
+FROM RefreshToken
+WHERE token_hash = $1;
+
+-- name: RevokeRefreshToken :exec
+UPDATE RefreshToken SET revoked_at = now()
+WHERE token_hash = $1 AND revoked_at IS NULL;
+
+-- name: RevokeUserRefreshTokens :exec
+UPDATE RefreshToken SET revoked_at = now()
+WHERE user_id = $1 AND revoked_at IS NULL;
