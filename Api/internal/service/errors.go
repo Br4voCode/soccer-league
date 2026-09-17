@@ -9,6 +9,9 @@ import (
 var (
 	ErrNameConflict = errors.New("name already exists")
 	ErrNotFound     = errors.New("resource not found")
+
+	ErrInvalidCredentials = errors.New("invalid credentials")
+	ErrInvalidToken       = errors.New("invalid token")
 )
 
 // ValidationError es una estructura que agrupa todos los errores de validación
