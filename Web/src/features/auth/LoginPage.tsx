@@ -59,10 +59,11 @@ export const LoginPage = () => {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="user">Usuario</Label>
+              <Label htmlFor="user">Email</Label>
               <Input
                 id="user"
-                placeholder="Nombre de usuario"
+                type="email"
+                placeholder="tu@email.com"
                 autoComplete="username"
                 value={user}
                 onChange={(event) => setUser(event.target.value)}
