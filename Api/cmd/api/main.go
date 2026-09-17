@@ -24,6 +24,11 @@ func main() {
 		log.Printf("env file not loaded: %v", err)
 	}
 
+	jwtSecret := os.Getenv("JWT_SECRET")
+	if jwtSecret == "" {
+		log.Fatal("JWT_SECRET is required")
+	}
+
 	// Init DB (reads from environment variables)
 	dbConn := db.NewDB(ctx)
 	defer dbConn.Close()
@@ -39,6 +44,7 @@ func main() {
 	matchSvc := service.NewMatchService(store)
 	playerStatsSvc := service.NewPlayerStatsService(store)
 	reportsSvc := service.NewReportsService(store)
+	authSvc := service.NewAuthService(store, jwtSecret)
 
 	// Init handlers
 	teamHandler := handler.NewTeamHandler(teamSvc)
@@ -48,6 +54,7 @@ func main() {
 	matchHandler := handler.NewMatchHandler(matchSvc)
 	playerStatsHandler := handler.NewPlayerStatsHandler(playerStatsSvc)
 	reportsHandler := handler.NewReportsHandler(reportsSvc)
+	authHandler := handler.NewAuthHandler(authSvc)
 
 	// Init router
 	r := chi.NewRouter()
@@ -72,6 +79,12 @@ func main() {
 	handler.ServeScalarUI(r)
 
 	// Register routes
+	r.Route("/auth", func(r chi.Router) {
+		r.Post("/login", authHandler.Login)
+		r.Post("/refresh", authHandler.Refresh)
+		r.Post("/logout", authHandler.Logout)
+	})
+
 	r.Route("/teams", func(r chi.Router) {
 		r.Post("/", teamHandler.Create)
 		r.Get("/", teamHandler.List)
