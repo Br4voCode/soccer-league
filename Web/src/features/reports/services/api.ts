@@ -1,43 +1,42 @@
 import { apiRequest } from "@/shared/utils/api-client";
-import type { 
-  StandingRow, 
+import { API_ROUTES } from "@/shared/config/routes";
+import type {
+  StandingRow,
   HeadToHeadMatch,
   MatchByDateRow,
-  CoachExperience, 
-  StadiumAttendance, 
-  TeamStatusReport, 
-  AllStarPlayer 
+  CoachExperience,
+  StadiumAttendance,
+  TeamStatusReport,
+  AllStarPlayer
 } from "../types";
 
 class ReportsApiService {
   async getStandings(seasonId: number): Promise<StandingRow[]> {
-    return apiRequest<StandingRow[]>(`/reports/standings?seasonId=${seasonId}`);
+    return apiRequest<StandingRow[]>(API_ROUTES.reports.standings(seasonId));
   }
 
   async getHeadToHead(team1: number, team2: number, seasonId?: number): Promise<HeadToHeadMatch[]> {
-    const seasonParam = seasonId ? `&seasonId=${seasonId}` : "";
-    return apiRequest<HeadToHeadMatch[]>(`/reports/matches-between-teams?team1=${team1}&team2=${team2}${seasonParam}`);
+    return apiRequest<HeadToHeadMatch[]>(API_ROUTES.reports.matchesBetweenTeams(team1, team2, seasonId));
   }
 
   async getSchedule(date: string, stadiumId?: number): Promise<MatchByDateRow[]> {
-    const stadiumParam = stadiumId ? `&stadiumId=${stadiumId}` : "";
-    return apiRequest<MatchByDateRow[]>(`/reports/matches-by-date?date=${date}${stadiumParam}`);
+    return apiRequest<MatchByDateRow[]>(API_ROUTES.reports.matchesByDate(date, stadiumId));
   }
 
   async getCoachExperience(): Promise<CoachExperience[]> {
-    return apiRequest<CoachExperience[]>("/reports/coaches-by-experience");
+    return apiRequest<CoachExperience[]>(API_ROUTES.reports.coachesByExperience());
   }
 
   async getStadiumAttendance(seasonId: number): Promise<StadiumAttendance[]> {
-    return apiRequest<StadiumAttendance[]>(`/reports/stadiums-by-attendance?seasonId=${seasonId}`);
+    return apiRequest<StadiumAttendance[]>(API_ROUTES.reports.stadiumsByAttendance(seasonId));
   }
 
   async getTeamStatus(teamId: number, seasonId: number): Promise<TeamStatusReport> {
-    return apiRequest<TeamStatusReport>(`/reports/team-status/${teamId}?seasonId=${seasonId}`);
+    return apiRequest<TeamStatusReport>(API_ROUTES.reports.teamStatus(teamId, seasonId));
   }
 
   async getAllStarTeam(seasonId: number): Promise<AllStarPlayer[]> {
-    return apiRequest<AllStarPlayer[]>(`/reports/all-star-team?seasonId=${seasonId}`);
+    return apiRequest<AllStarPlayer[]>(API_ROUTES.reports.allStarTeam(seasonId));
   }
 }
 

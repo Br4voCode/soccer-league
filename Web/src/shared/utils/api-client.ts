@@ -1,6 +1,5 @@
 import { translateError } from "./error-translator";
-
-export const API_BASE_URL = "/api/backend";
+import { WEB_API_ROUTES } from "@/shared/config/routes";
 
 export interface ApiErrorResponse {
   error: string;
@@ -31,7 +30,7 @@ export async function apiRequest<T>(
   endpoint: string,
   options: RequestInit = {},
 ): Promise<T> {
-  const url = `${API_BASE_URL}${endpoint}`;
+  const url = `${WEB_API_ROUTES.backend}${endpoint}`;
 
   const response = await fetch(url, {
     headers: {

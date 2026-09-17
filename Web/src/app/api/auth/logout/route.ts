@@ -5,6 +5,7 @@ import {
   REFRESH_TOKEN_COOKIE,
 } from "@/shared/auth/session";
 import { getApiUrl } from "@/shared/config/api";
+import { API_ROUTES } from "@/shared/config/routes";
 
 export async function POST() {
   const apiUrl = getApiUrl();
@@ -13,7 +14,7 @@ export async function POST() {
 
   if (apiUrl && refreshToken) {
     try {
-      await fetch(`${apiUrl}/auth/logout`, {
+      await fetch(`${apiUrl}${API_ROUTES.auth.logout}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ refresh_token: refreshToken }),

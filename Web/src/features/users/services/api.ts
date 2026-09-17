@@ -5,6 +5,7 @@ import type {
 } from "../types";
 import type { PaginatedResponse } from "@/shared/types";
 import { apiRequest } from "@/shared/utils/api-client";
+import { API_ROUTES } from "@/shared/config/routes";
 
 class UsersApiService {
   async getUsersPage(
@@ -13,26 +14,26 @@ class UsersApiService {
   ): Promise<PaginatedResponse<User>> {
     const offset = (page - 1) * pageSize;
     return apiRequest<PaginatedResponse<User>>(
-      `/users?limit=${pageSize}&offset=${offset}`,
+      API_ROUTES.users.collection({ limit: pageSize, offset }),
     );
   }
 
   async createUser(user: CreateUserRequest): Promise<User> {
-    return apiRequest<User>("/users", {
+    return apiRequest<User>(API_ROUTES.users.collection(), {
       method: "POST",
       body: JSON.stringify(user),
     });
   }
 
   async updateUserRole(id: number, data: UpdateUserRoleRequest): Promise<User> {
-    return apiRequest<User>(`/users/${id}`, {
+    return apiRequest<User>(API_ROUTES.users.detail(id), {
       method: "PUT",
       body: JSON.stringify(data),
     });
   }
 
   async deleteUser(id: number): Promise<void> {
-    return apiRequest<void>(`/users/${id}`, {
+    return apiRequest<void>(API_ROUTES.users.detail(id), {
       method: "DELETE",
     });
   }
