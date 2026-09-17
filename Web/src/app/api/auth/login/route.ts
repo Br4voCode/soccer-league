@@ -6,12 +6,13 @@ import {
   REFRESH_TOKEN_MAX_AGE,
 } from "@/shared/auth/session";
 import type { TokenPair } from "@/shared/auth/tokens";
+import { getApiUrl } from "@/shared/config/api";
 
 export async function POST(request: Request) {
-  const apiUrl = process.env.API_URL;
+  const apiUrl = getApiUrl();
   if (!apiUrl || !process.env.JWT_SECRET) {
     return NextResponse.json(
-      { error: "Faltan API_URL o JWT_SECRET en el servidor" },
+      { error: "Falta la URL de la API o JWT_SECRET en el servidor" },
       { status: 500 },
     );
   }

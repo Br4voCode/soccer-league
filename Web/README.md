@@ -15,7 +15,9 @@ cp .env.example .env
 
 | Variable | Ámbito | Descripción |
 | --- | --- | --- |
-| `API_URL` | Servidor | URL base de la API (Go) |
+| `API_TARGET` | Servidor | API a usar: `local` (Docker) o `remote` (desplegada). Por defecto `remote` |
+| `API_URL_LOCAL` | Servidor | URL base de la API Go en Docker, p. ej. `http://localhost:8080` |
+| `API_URL_REMOTE` | Servidor | URL base de la API Go desplegada |
 | `JWT_SECRET` | Servidor | Clave HMAC-SHA256 para verificar los JWT — debe ser idéntica a `JWT_SECRET` en la API Go, que es quien los emite |
 
 Genera `JWT_SECRET` con:
@@ -51,7 +53,7 @@ src/
 
 Los usuarios reales (con rol `superadmin`, `admin` o `visitante`) viven en la base de datos de
 la API Go, no en este proyecto. `src/app/api/auth/login` reenvía las credenciales a
-`POST ${API_URL}/auth/login`; si son válidas, Go responde con un access token (JWT, ~15 min) y
+`POST <API>/auth/login` (la URL resuelta según `API_TARGET`); si son válidas, Go responde con un access token (JWT, ~15 min) y
 un refresh token (opaco, ~7 días), y esta ruta los guarda en dos cookies `httpOnly`.
 
 `src/shared/auth/session.ts` solo **verifica** el JWT (misma `JWT_SECRET` que Go, nunca lo firma

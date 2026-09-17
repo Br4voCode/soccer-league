@@ -4,9 +4,10 @@ import {
   ACCESS_TOKEN_COOKIE,
   REFRESH_TOKEN_COOKIE,
 } from "@/shared/auth/session";
+import { getApiUrl } from "@/shared/config/api";
 
 export async function POST() {
-  const apiUrl = process.env.API_URL;
+  const apiUrl = getApiUrl();
   const cookieStore = await cookies();
   const refreshToken = cookieStore.get(REFRESH_TOKEN_COOKIE)?.value;
 

@@ -6,6 +6,7 @@ import {
   REFRESH_TOKEN_MAX_AGE,
 } from "@/shared/auth/session";
 import { refreshAccessToken } from "@/shared/auth/tokens";
+import { getApiUrl } from "@/shared/config/api";
 
 const METHODS_WITH_BODY = new Set(["POST", "PUT", "PATCH"]);
 const EMPTY_BODY_STATUS = new Set([204, 205, 304]);
@@ -28,10 +29,10 @@ async function handler(
   request: NextRequest,
   { params }: { params: Promise<{ path: string[] }> },
 ) {
-  const apiUrl = process.env.API_URL;
+  const apiUrl = getApiUrl();
   if (!apiUrl) {
     return NextResponse.json(
-      { error: "API_URL no está definida en el servidor" },
+      { error: "La URL de la API no está definida en el servidor" },
       { status: 500 },
     );
   }
