@@ -1,3 +1,5 @@
+import { getApiUrl } from "@/shared/config/api";
+
 export interface TokenPair {
   readonly access_token: string;
   readonly refresh_token: string;
@@ -13,7 +15,7 @@ export interface TokenPair {
 export const refreshAccessToken = async (
   refreshToken?: string,
 ): Promise<TokenPair | null> => {
-  const apiUrl = process.env.API_URL;
+  const apiUrl = getApiUrl();
   if (!apiUrl || !refreshToken) return null;
 
   try {
