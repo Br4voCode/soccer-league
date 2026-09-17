@@ -45,6 +45,7 @@ func main() {
 	playerStatsSvc := service.NewPlayerStatsService(store)
 	reportsSvc := service.NewReportsService(store)
 	authSvc := service.NewAuthService(store, jwtSecret)
+	userSvc := service.NewUserService(store)
 
 	// Init handlers
 	teamHandler := handler.NewTeamHandler(teamSvc)
@@ -55,6 +56,7 @@ func main() {
 	playerStatsHandler := handler.NewPlayerStatsHandler(playerStatsSvc)
 	reportsHandler := handler.NewReportsHandler(reportsSvc)
 	authHandler := handler.NewAuthHandler(authSvc)
+	userHandler := handler.NewUserHandler(userSvc)
 
 	// Init router
 	r := chi.NewRouter()
@@ -83,6 +85,14 @@ func main() {
 		r.Post("/login", authHandler.Login)
 		r.Post("/refresh", authHandler.Refresh)
 		r.Post("/logout", authHandler.Logout)
+	})
+
+	r.Route("/users", func(r chi.Router) {
+		r.Get("/", userHandler.List)
+		r.Post("/", userHandler.Create)
+		r.Get("/{id}", userHandler.Get)
+		r.Put("/{id}", userHandler.UpdateRole)
+		r.Delete("/{id}", userHandler.Delete)
 	})
 
 	r.Route("/teams", func(r chi.Router) {
