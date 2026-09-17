@@ -1,38 +1,39 @@
 import type { Stadium, CreateStadiumRequest, UpdateStadiumRequest } from "../types";
 import type { PaginatedResponse } from "@/shared/types";
 import { apiRequest } from "@/shared/utils/api-client";
+import { API_ROUTES } from "@/shared/config/routes";
 
 class StadiumsApiService {
   async getStadiums(): Promise<Stadium[]> {
-    const res = await apiRequest<PaginatedResponse<Stadium>>("/stadiums?limit=100");
+    const res = await apiRequest<PaginatedResponse<Stadium>>(API_ROUTES.stadiums.collection({ limit: 100 }));
     return res.data;
   }
 
   async getStadiumsPage(page: number, pageSize: number): Promise<PaginatedResponse<Stadium>> {
     const offset = (page - 1) * pageSize;
-    return apiRequest<PaginatedResponse<Stadium>>(`/stadiums?limit=${pageSize}&offset=${offset}`);
+    return apiRequest<PaginatedResponse<Stadium>>(API_ROUTES.stadiums.collection({ limit: pageSize, offset }));
   }
 
   async getStadium(id: number): Promise<Stadium> {
-    return apiRequest<Stadium>(`/stadiums/${id}`);
+    return apiRequest<Stadium>(API_ROUTES.stadiums.detail(id));
   }
 
   async createStadium(stadium: CreateStadiumRequest): Promise<Stadium> {
-    return apiRequest<Stadium>("/stadiums", {
+    return apiRequest<Stadium>(API_ROUTES.stadiums.collection(), {
       method: "POST",
       body: JSON.stringify(stadium),
     });
   }
 
   async updateStadium(id: number, stadium: UpdateStadiumRequest): Promise<Stadium> {
-    return apiRequest<Stadium>(`/stadiums/${id}`, {
+    return apiRequest<Stadium>(API_ROUTES.stadiums.detail(id), {
       method: "PUT",
       body: JSON.stringify(stadium),
     });
   }
 
   async deleteStadium(id: number): Promise<void> {
-    return apiRequest<void>(`/stadiums/${id}`, {
+    return apiRequest<void>(API_ROUTES.stadiums.detail(id), {
       method: "DELETE",
     });
   }

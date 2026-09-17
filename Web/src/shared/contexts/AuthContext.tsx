@@ -10,6 +10,7 @@ import {
 } from "react";
 import { useRouter } from "next/navigation";
 import type { Role } from "@/shared/auth/session";
+import { WEB_API_ROUTES } from "@/shared/config/routes";
 
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -37,7 +38,7 @@ export const AuthProvider = ({
 
   const login = useCallback(
     async (user: string, pass: string) => {
-      const response = await fetch("/api/auth/login", {
+      const response = await fetch(WEB_API_ROUTES.login, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ user, pass }),
@@ -55,7 +56,7 @@ export const AuthProvider = ({
   );
 
   const logout = useCallback(async () => {
-    await fetch("/api/auth/logout", { method: "POST" });
+    await fetch(WEB_API_ROUTES.logout, { method: "POST" });
     setIsAuthenticated(false);
     setRole(null);
     router.replace("/login");

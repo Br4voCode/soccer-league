@@ -1,4 +1,5 @@
 import { getApiUrl } from "@/shared/config/api";
+import { API_ROUTES } from "@/shared/config/routes";
 
 export interface TokenPair {
   readonly access_token: string;
@@ -19,7 +20,7 @@ export const refreshAccessToken = async (
   if (!apiUrl || !refreshToken) return null;
 
   try {
-    const response = await fetch(`${apiUrl}/auth/refresh`, {
+    const response = await fetch(`${apiUrl}${API_ROUTES.auth.refresh}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ refresh_token: refreshToken }),

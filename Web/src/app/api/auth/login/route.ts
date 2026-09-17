@@ -7,6 +7,7 @@ import {
 } from "@/shared/auth/session";
 import type { TokenPair } from "@/shared/auth/tokens";
 import { getApiUrl } from "@/shared/config/api";
+import { API_ROUTES } from "@/shared/config/routes";
 
 export async function POST(request: Request) {
   const apiUrl = getApiUrl();
@@ -26,7 +27,7 @@ export async function POST(request: Request) {
 
   let apiResponse: Response;
   try {
-    apiResponse = await fetch(`${apiUrl}/auth/login`, {
+    apiResponse = await fetch(`${apiUrl}${API_ROUTES.auth.login}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
