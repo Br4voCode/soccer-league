@@ -106,7 +106,12 @@
     "notFound": "Page not found",
     "notFoundDescription": "The page you are looking for does not exist or has moved.",
     "accessDenied": "Access denied",
-    "noTeam": "No team"
+    "noTeam": "No team",
+    "downloadPdf": "Download PDF",
+    "generatingPdf": "Generating PDF…",
+    "pdfError": "Could not generate the PDF. Please try again.",
+    "pdfForbidden": "You don't have permission to download reports.",
+    "sessionExpired": "Your session has expired. Sign in again and retry."
   },
   "Reports": {
     "standings": {
