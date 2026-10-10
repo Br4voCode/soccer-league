@@ -1,11 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { useLocale } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { Download, Loader2 } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { WEB_API_ROUTES } from "@/shared/config/routes";
-import { t } from "@/shared/translations";
 import { translateError } from "@/shared/utils/error-translator";
 
 interface ReportPdfButtonProps {
@@ -26,32 +25,36 @@ const openInNewTab = (href: string) => {
   anchor.remove();
 };
 
-const readErrorMessage = async (response: Response, contentType: string): Promise<string> => {
-  if (response.status === 401) {
-    return t.common.sessionExpired;
-  }
-  if (response.status === 403) {
-    return t.common.pdfForbidden;
-  }
-  if (contentType.includes("application/json")) {
-    try {
-      const data = (await response.json()) as { error?: unknown };
-      if (typeof data.error === "string" && data.error) {
-        return translateError(data.error);
-      }
-    } catch {
-      // respuesta sin cuerpo JSON
-    }
-  }
-  return t.common.pdfError;
-};
-
 export const ReportPdfButton = ({ url, disabled = false }: ReportPdfButtonProps) => {
   const locale = useLocale();
+  const t = useTranslations("Common");
   const [isChecking, setIsChecking] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const targetUrl = withLang(`${WEB_API_ROUTES.backend}${url}`, locale);
+
+  const readErrorMessage = async (
+    response: Response,
+    contentType: string,
+  ): Promise<string> => {
+    if (response.status === 401) {
+      return t("sessionExpired");
+    }
+    if (response.status === 403) {
+      return t("pdfForbidden");
+    }
+    if (contentType.includes("application/json")) {
+      try {
+        const data = (await response.json()) as { error?: unknown };
+        if (typeof data.error === "string" && data.error) {
+          return translateError(data.error);
+        }
+      } catch {
+        // respuesta sin cuerpo JSON
+      }
+    }
+    return t("pdfError");
+  };
 
   const handleClick = async () => {
     if (isChecking || disabled) return;
@@ -94,7 +97,7 @@ export const ReportPdfButton = ({ url, disabled = false }: ReportPdfButtonProps)
           // el navegador puede bloquear el cierre
         }
       }
-      setError(t.common.pdfError);
+      setError(t("pdfError"));
     } finally {
       setIsChecking(false);
     }
@@ -114,7 +117,7 @@ export const ReportPdfButton = ({ url, disabled = false }: ReportPdfButtonProps)
         ) : (
           <Download />
         )}
-        {isChecking ? t.common.generatingPdf : t.common.downloadPdf}
+        {isChecking ? t("generatingPdf") : t("downloadPdf")}
       </Button>
       {error && (
         <p role="alert" className="max-w-56 text-sm text-destructive">

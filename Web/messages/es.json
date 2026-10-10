@@ -106,7 +106,12 @@
     "notFound": "Página no encontrada",
     "notFoundDescription": "La página que buscas no existe o fue movida.",
     "accessDenied": "Acceso denegado",
-    "noTeam": "Sin equipo"
+    "noTeam": "Sin equipo",
+    "downloadPdf": "Descargar PDF",
+    "generatingPdf": "Generando PDF…",
+    "pdfError": "No se pudo generar el PDF. Intenta de nuevo.",
+    "pdfForbidden": "No tienes permisos para descargar reportes.",
+    "sessionExpired": "La sesión expiró. Inicia sesión nuevamente e inténtalo de nuevo."
   },
   "Reports": {
     "standings": {
