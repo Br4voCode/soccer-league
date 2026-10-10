@@ -149,13 +149,6 @@ func anyToFloat64(v any) float64 {
 	}
 }
 
-func parseReportDate(value string) (time.Time, error) {
-	if value == "" {
-		return time.Time{}, fmt.Errorf("date is required")
-	}
-	return time.Parse("2006-01-02", value)
-}
-
 func (s *ReportsService) Standings(ctx context.Context, seasonID int64) ([]*StandingRow, error) {
 	rows, err := s.store.ListStandings(ctx, int64ToNullInt64(seasonID))
 	if err != nil {
@@ -231,21 +224,27 @@ func (s *ReportsService) MatchesBetweenTeams(ctx context.Context, team1ID, team2
 	return result, nil
 }
 
-func (s *ReportsService) MatchesByDate(ctx context.Context, date string, stadiumID *int64) ([]*MatchByDateRow, error) {
-	matchDate, err := parseReportDate(date)
-	if err != nil {
-		return nil, err
+// MatchesByDate returns the matches played between two dates (inclusive).
+// A single day is expressed as from == to so every caller shares one query path.
+func (s *ReportsService) MatchesByDate(ctx context.Context, from, to time.Time, stadiumID *int64) ([]*MatchByDateRow, error) {
+	if from.IsZero() || to.IsZero() {
+		return nil, fmt.Errorf("date range is required")
 	}
+	if from.After(to) {
+		return nil, fmt.Errorf("invalid date range: from must not be after to")
+	}
+
 	if stadiumID != nil {
-		rows, err := s.store.ListMatchesForDateAndStadium(ctx, store.ListMatchesForDateAndStadiumParams{
-			MatchDate: matchDate,
-			StadiumID: int64ToNullInt64(*stadiumID),
+		stadiumRows, err := s.store.ListMatchesBetweenDatesAndStadium(ctx, store.ListMatchesBetweenDatesAndStadiumParams{
+			MatchDate:   from,
+			MatchDate_2: to,
+			StadiumID:   int64ToNullInt64(*stadiumID),
 		})
 		if err != nil {
 			return nil, err
 		}
-		result := make([]*MatchByDateRow, 0, len(rows))
-		for _, row := range rows {
+		result := make([]*MatchByDateRow, 0, len(stadiumRows))
+		for _, row := range stadiumRows {
 			result = append(result, &MatchByDateRow{
 				ID:           row.ID,
 				MatchDate:    row.MatchDate.Format("2006-01-02"),
@@ -262,7 +261,11 @@ func (s *ReportsService) MatchesByDate(ctx context.Context, date string, stadium
 		}
 		return result, nil
 	}
-	rows, err := s.store.ListMatchesForDate(ctx, matchDate)
+
+	rows, err := s.store.ListMatchesBetweenDates(ctx, store.ListMatchesBetweenDatesParams{
+		MatchDate:   from,
+		MatchDate_2: to,
+	})
 	if err != nil {
 		return nil, err
 	}

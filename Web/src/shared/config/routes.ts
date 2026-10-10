@@ -46,8 +46,8 @@ export const API_ROUTES = {
       withQuery("/reports/standings", { seasonId }),
     matchesBetweenTeams: (team1: Id, team2: Id, seasonId?: Id) =>
       withQuery("/reports/matches-between-teams", { team1, team2, seasonId }),
-    matchesByDate: (date: string, stadiumId?: Id) =>
-      withQuery("/reports/matches-by-date", { date, stadiumId }),
+    matchesByDate: (params: Query) =>
+      withQuery("/reports/matches-by-date", params),
     coachesByExperience: () => "/reports/coaches-by-experience",
     stadiumsByAttendance: (seasonId: Id) =>
       withQuery("/reports/stadiums-by-attendance", { seasonId }),

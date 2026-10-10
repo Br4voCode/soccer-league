@@ -498,8 +498,8 @@ LEFT JOIN LATERAL (
 WHERE (m.home_team_id = $1 AND m.away_team_id = $2) OR (m.home_team_id = $2 AND m.away_team_id = $1)
 ORDER BY m.match_date, m.id;
 
--- Report 3: matches by date
--- name: ListMatchesForDate :many
+-- Report 3: matches by date range
+-- name: ListMatchesBetweenDates :many
 SELECT
     m.id,
     m.match_date,
@@ -530,10 +530,10 @@ LEFT JOIN LATERAL (
     JOIN Footballer f ON f.id = p.footballer_id
     WHERE ps.match_id = m.id AND f.team_id = m.away_team_id
 ) ag ON true
-WHERE m.match_date = $1
-ORDER BY m.id;
+WHERE m.match_date BETWEEN $1 AND $2
+ORDER BY m.match_date, m.id;
 
--- name: ListMatchesForDateAndStadium :many
+-- name: ListMatchesBetweenDatesAndStadium :many
 SELECT
     m.id,
     m.match_date,
@@ -564,9 +564,9 @@ LEFT JOIN LATERAL (
     JOIN Footballer f ON f.id = p.footballer_id
     WHERE ps.match_id = m.id AND f.team_id = m.away_team_id
 ) ag ON true
-WHERE m.match_date = $1
-  AND m.stadium_id = $2
-ORDER BY m.id;
+WHERE m.match_date BETWEEN $1 AND $2
+  AND m.stadium_id = $3
+ORDER BY m.match_date, m.id;
 
 -- Report 4: coaches by experience
 -- name: ListCoachesByExperience :many

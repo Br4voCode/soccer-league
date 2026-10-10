@@ -4,12 +4,14 @@ import { PageHeader } from "@/shared/components/PageHeader";
 import { AppLink } from "@/shared/components/AppLink";
 import { APP_ROUTES } from "@/shared/config/routes";
 import { useState } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useQuery } from "@tanstack/react-query";
 import { CalendarIcon } from "lucide-react";
-import { format, parseISO } from "date-fns";
+import { format, isAfter, isBefore, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import { reportsApiService } from "../services/api";
+import { resolveScheduleRange } from "../utils";
+import type { ScheduleParams, SchedulePeriod } from "../types";
 import { ReportPdfButton } from "../components/ReportPdfButton";
 import { stadiumsApiService } from "@/features/stadiums/services/api";
 import { useLatestMatch } from "@/features/matches/hooks/useLatestMatch";
@@ -39,9 +41,23 @@ import {
 } from "@/shared/components/ui/popover";
 import { cn } from "@/shared/utils";
 
+const PERIODS: readonly SchedulePeriod[] = ["day", "week", "month", "year", "custom"];
+
+const PERIOD_LABEL_KEYS: Record<SchedulePeriod, string> = {
+  day: "Reports.schedule.periodDay",
+  week: "Reports.schedule.periodWeek",
+  month: "Reports.schedule.periodMonth",
+  year: "Reports.schedule.periodYear",
+  custom: "Reports.schedule.periodCustom",
+};
+
 export const ScheduleReport = () => {
   const t = useTranslations();
+  const locale = useLocale();
+  const [period, setPeriod] = useState<SchedulePeriod>("day");
   const [dateChoice, setDateChoice] = useState<Date>();
+  const [rangeFrom, setRangeFrom] = useState<Date>();
+  const [rangeTo, setRangeTo] = useState<Date>();
   const [selectedStadium, setSelectedStadium] = useState<string>("");
 
   const { data: stadiumsData } = useQuery({
@@ -56,19 +72,57 @@ export const ScheduleReport = () => {
     dateChoice ??
     (latestMatch ? new Date(latestMatch.match_date) : undefined);
 
+  const range = resolveScheduleRange({
+    period,
+    day: period === "day" ? selectedDate : undefined,
+    from: rangeFrom,
+    to: rangeTo,
+    locale,
+  });
+  const isReady = !!range.from && !!range.to;
 
-  const dateStr = selectedDate ? format(selectedDate, "yyyy-MM-dd") : "";
+  const scheduleParams: ScheduleParams = {
+    period,
+    from: range.from ?? "",
+    to: range.to ?? "",
+    stadiumId: selectedStadium ? parseInt(selectedStadium) : undefined,
+  };
 
   const { data: matchesData, isLoading, isError } = useQuery({
-    queryKey: ["reports", "schedule", dateStr, selectedStadium],
+    queryKey: [
+      "reports",
+      "schedule",
+      scheduleParams.period,
+      scheduleParams.from,
+      scheduleParams.to,
+      selectedStadium,
+    ],
     queryFn: () =>
-      reportsApiService.getSchedule(
-        dateStr,
-        selectedStadium ? parseInt(selectedStadium) : undefined,
-      ),
-    enabled: !!selectedDate,
+      isReady
+        ? reportsApiService.getSchedule(scheduleParams)
+        : Promise.resolve([]),
+    enabled: isReady,
   });
   const matches = matchesData ?? [];
+
+  const rangeLabel =
+    range.from && range.to
+      ? `${format(parseISO(range.from), "dd/MM/yyyy")} - ${format(parseISO(range.to), "dd/MM/yyyy")}`
+      : t("Reports.schedule.selectRange");
+
+  const handleFromChange = (value?: Date) => {
+    if (value && rangeTo && isAfter(value, rangeTo)) {
+      setRangeTo(value);
+    }
+    setRangeFrom(value);
+  };
+
+  const handleToChange = (value?: Date) => {
+    if (value && rangeFrom && isBefore(value, rangeFrom)) {
+      setRangeFrom(value);
+    }
+    setRangeTo(value);
+  };
 
   return (
     <div className="space-y-6">
@@ -77,46 +131,142 @@ export const ScheduleReport = () => {
         title={t("Reports.schedule.title")}
         actions={
             <ReportPdfButton
-              url={reportsApiService.schedulePdfUrl(
-                dateStr,
-                selectedStadium ? Number(selectedStadium) : undefined,
-              )}
-              disabled={!dateStr || isLoading || isError || matches.length === 0}
+              url={reportsApiService.schedulePdfUrl(scheduleParams)}
+              disabled={!isReady || isLoading || isError || matches.length === 0}
             />
         }
       />
 
       <div className="flex flex-wrap gap-4">
         <div className="min-w-52 flex-1 basis-56">
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                aria-label={t("Common.date")}
-                className={cn(
-                  "w-full justify-start text-left font-normal",
-                  !selectedDate && "text-muted-foreground",
-                )}
-              >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {selectedDate ? (
-                  `${t("Common.date")}: ${format(selectedDate, "PPP", { locale: es })}`
-                ) : (
-                  <span>{t("Reports.schedule.selectDate")}</span>
-                )}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
-              <Calendar
-                mode="single"
-                selected={selectedDate}
-                onSelect={setDateChoice}
-                autoFocus
-                locale={es}
-              />
-            </PopoverContent>
-          </Popover>
+          <Select
+            value={period}
+            onValueChange={(value) => setPeriod(value as SchedulePeriod)}
+          >
+            <SelectTrigger aria-label={t("Reports.schedule.period")}>
+              <SelectValue placeholder={t("Reports.schedule.period")} />
+            </SelectTrigger>
+            <SelectContent>
+              {PERIODS.map((value) => (
+                <SelectItem key={value} value={value}>
+                  {t(PERIOD_LABEL_KEYS[value])}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
+
+        {period === "day" && (
+          <div className="min-w-52 flex-1 basis-56">
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  aria-label={t("Common.date")}
+                  className={cn(
+                    "w-full justify-start text-left font-normal",
+                    !selectedDate && "text-muted-foreground",
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {selectedDate ? (
+                    `${t("Common.date")}: ${format(selectedDate, "PPP", { locale: es })}`
+                  ) : (
+                    <span>{t("Reports.schedule.selectDate")}</span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={selectedDate}
+                  onSelect={setDateChoice}
+                  autoFocus
+                  locale={es}
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
+        )}
+
+        {(period === "week" || period === "month" || period === "year") && (
+          <div className="min-w-52 flex-1 basis-56">
+            <Button
+              variant="outline"
+              aria-label={t("Common.date")}
+              className="w-full justify-start text-left font-normal"
+              disabled
+            >
+              <CalendarIcon className="mr-2 h-4 w-4" />
+              {rangeLabel}
+            </Button>
+          </div>
+        )}
+
+        {period === "custom" && (
+          <>
+            <div className="min-w-52 flex-1 basis-56">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    aria-label={t("Reports.schedule.fromDate")}
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !rangeFrom && "text-muted-foreground",
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {rangeFrom ? (
+                      `${t("Reports.schedule.fromDate")}: ${format(rangeFrom, "PPP", { locale: es })}`
+                    ) : (
+                      <span>{t("Reports.schedule.fromDate")}</span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={rangeFrom}
+                    onSelect={handleFromChange}
+                    autoFocus
+                    locale={es}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+            <div className="min-w-52 flex-1 basis-56">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    aria-label={t("Reports.schedule.toDate")}
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !rangeTo && "text-muted-foreground",
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {rangeTo ? (
+                      `${t("Reports.schedule.toDate")}: ${format(rangeTo, "PPP", { locale: es })}`
+                    ) : (
+                      <span>{t("Reports.schedule.toDate")}</span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={rangeTo}
+                    onSelect={handleToChange}
+                    locale={es}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+          </>
+        )}
+
         <div className="min-w-52 flex-1 basis-56">
           <Select
             value={selectedStadium || "all"}
@@ -141,10 +291,12 @@ export const ScheduleReport = () => {
 
       {isResolvingDefaults ? (
         <Loading />
-      ) : !selectedDate ? (
+      ) : !isReady ? (
         <Card className="bg-muted/50 border-dashed">
           <CardContent className="py-12 text-center text-muted-foreground">
-            {t("Reports.schedule.empty")}
+            {period === "custom"
+              ? t("Reports.schedule.selectRange")
+              : t("Reports.schedule.empty")}
           </CardContent>
         </Card>
       ) : isLoading ? (
@@ -173,7 +325,9 @@ export const ScheduleReport = () => {
                 {matches.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={6} className="text-center py-8">
-                      {t("Reports.schedule.noMatches")}
+                      {period === "day"
+                        ? t("Reports.schedule.noMatches")
+                        : t("Reports.schedule.noMatchesPeriod")}
                     </TableCell>
                   </TableRow>
                 ) : (

@@ -41,9 +41,11 @@ Respuesta: `id`, `match_date`, IDs de equipos/estadio, nombres correspondientes,
 
 ## Partidos por fecha
 
-Consultas `ListMatchesForDate` y `ListMatchesForDateAndStadium`. La igualdad se aplica a una fecha DATE; opcionalmente filtra sede. Orden por ID.
+Consultas `ListMatchesBetweenDates` y `ListMatchesBetweenDatesAndStadium`. El filtro es un intervalo inclusivo sobre la fecha DATE (`m.match_date BETWEEN $1 AND $2`); opcionalmente filtra sede. Orden por fecha y después por ID. Un día único se expresa con `from = to`.
 
-Respuesta: identificación y nombres del encuentro, goles y `attendance`. No es una búsqueda por intervalo ni por hora. Aunque el enunciado habla de partidos jugados, el SQL no filtra el estado disputado.
+El cliente resuelve el rango (día, semana, mes, año o rango personalizado) y lo envía como `from` y `to` junto con `period`, de modo que la tabla del reporte y su PDF comparten la misma consulta. La semana se calcula con inicio lunes en español y domingo en inglés; mes y año son respecto al día actual.
+
+Respuesta: identificación y nombres del encuentro, goles y `attendance`. No es una búsqueda por hora. Aunque el enunciado habla de partidos jugados, el SQL no filtra el estado disputado.
 
 ## Entrenadores
 

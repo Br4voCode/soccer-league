@@ -1476,6 +1476,187 @@ func (q *Queries) ListMatches(ctx context.Context) ([]ListMatchesRow, error) {
 	return items, nil
 }
 
+const listMatchesBetweenDates = `-- name: ListMatchesBetweenDates :many
+SELECT
+    m.id,
+    m.match_date,
+    m.home_team_id,
+    m.away_team_id,
+    m.stadium_id,
+    s.name AS stadium_name,
+    ht.name AS home_team_name,
+    at.name AS away_team_name,
+    CAST(COALESCE(hg.total, 0) AS INT) AS home_goals,
+    CAST(COALESCE(ag.total, 0) AS INT) AS away_goals,
+    m.attendance
+FROM Match m
+JOIN Team ht ON m.home_team_id = ht.id
+JOIN Team at ON m.away_team_id = at.id
+JOIN Stadium s ON m.stadium_id = s.id
+LEFT JOIN LATERAL (
+    SELECT COALESCE(SUM(ps.goals_scored), 0) AS total
+    FROM PlayerStats ps
+    JOIN Player p ON p.footballer_id = ps.player_id
+    JOIN Footballer f ON f.id = p.footballer_id
+    WHERE ps.match_id = m.id AND f.team_id = m.home_team_id
+) hg ON true
+LEFT JOIN LATERAL (
+    SELECT COALESCE(SUM(ps.goals_scored), 0) AS total
+    FROM PlayerStats ps
+    JOIN Player p ON p.footballer_id = ps.player_id
+    JOIN Footballer f ON f.id = p.footballer_id
+    WHERE ps.match_id = m.id AND f.team_id = m.away_team_id
+) ag ON true
+WHERE m.match_date BETWEEN $1 AND $2
+ORDER BY m.match_date, m.id
+`
+
+type ListMatchesBetweenDatesParams struct {
+	MatchDate   time.Time
+	MatchDate_2 time.Time
+}
+
+type ListMatchesBetweenDatesRow struct {
+	ID           int64
+	MatchDate    time.Time
+	HomeTeamID   sql.NullInt64
+	AwayTeamID   sql.NullInt64
+	StadiumID    sql.NullInt64
+	StadiumName  string
+	HomeTeamName string
+	AwayTeamName string
+	HomeGoals    int32
+	AwayGoals    int32
+	Attendance   sql.NullInt32
+}
+
+// Report 3: matches by date range
+func (q *Queries) ListMatchesBetweenDates(ctx context.Context, arg ListMatchesBetweenDatesParams) ([]ListMatchesBetweenDatesRow, error) {
+	rows, err := q.db.QueryContext(ctx, listMatchesBetweenDates, arg.MatchDate, arg.MatchDate_2)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListMatchesBetweenDatesRow
+	for rows.Next() {
+		var i ListMatchesBetweenDatesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.MatchDate,
+			&i.HomeTeamID,
+			&i.AwayTeamID,
+			&i.StadiumID,
+			&i.StadiumName,
+			&i.HomeTeamName,
+			&i.AwayTeamName,
+			&i.HomeGoals,
+			&i.AwayGoals,
+			&i.Attendance,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listMatchesBetweenDatesAndStadium = `-- name: ListMatchesBetweenDatesAndStadium :many
+SELECT
+    m.id,
+    m.match_date,
+    m.home_team_id,
+    m.away_team_id,
+    m.stadium_id,
+    s.name AS stadium_name,
+    ht.name AS home_team_name,
+    at.name AS away_team_name,
+    CAST(COALESCE(hg.total, 0) AS INT) AS home_goals,
+    CAST(COALESCE(ag.total, 0) AS INT) AS away_goals,
+    m.attendance
+FROM Match m
+JOIN Team ht ON m.home_team_id = ht.id
+JOIN Team at ON m.away_team_id = at.id
+JOIN Stadium s ON m.stadium_id = s.id
+LEFT JOIN LATERAL (
+    SELECT COALESCE(SUM(ps.goals_scored), 0) AS total
+    FROM PlayerStats ps
+    JOIN Player p ON p.footballer_id = ps.player_id
+    JOIN Footballer f ON f.id = p.footballer_id
+    WHERE ps.match_id = m.id AND f.team_id = m.home_team_id
+) hg ON true
+LEFT JOIN LATERAL (
+    SELECT COALESCE(SUM(ps.goals_scored), 0) AS total
+    FROM PlayerStats ps
+    JOIN Player p ON p.footballer_id = ps.player_id
+    JOIN Footballer f ON f.id = p.footballer_id
+    WHERE ps.match_id = m.id AND f.team_id = m.away_team_id
+) ag ON true
+WHERE m.match_date BETWEEN $1 AND $2
+  AND m.stadium_id = $3
+ORDER BY m.match_date, m.id
+`
+
+type ListMatchesBetweenDatesAndStadiumParams struct {
+	MatchDate   time.Time
+	MatchDate_2 time.Time
+	StadiumID   sql.NullInt64
+}
+
+type ListMatchesBetweenDatesAndStadiumRow struct {
+	ID           int64
+	MatchDate    time.Time
+	HomeTeamID   sql.NullInt64
+	AwayTeamID   sql.NullInt64
+	StadiumID    sql.NullInt64
+	StadiumName  string
+	HomeTeamName string
+	AwayTeamName string
+	HomeGoals    int32
+	AwayGoals    int32
+	Attendance   sql.NullInt32
+}
+
+func (q *Queries) ListMatchesBetweenDatesAndStadium(ctx context.Context, arg ListMatchesBetweenDatesAndStadiumParams) ([]ListMatchesBetweenDatesAndStadiumRow, error) {
+	rows, err := q.db.QueryContext(ctx, listMatchesBetweenDatesAndStadium, arg.MatchDate, arg.MatchDate_2, arg.StadiumID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListMatchesBetweenDatesAndStadiumRow
+	for rows.Next() {
+		var i ListMatchesBetweenDatesAndStadiumRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.MatchDate,
+			&i.HomeTeamID,
+			&i.AwayTeamID,
+			&i.StadiumID,
+			&i.StadiumName,
+			&i.HomeTeamName,
+			&i.AwayTeamName,
+			&i.HomeGoals,
+			&i.AwayGoals,
+			&i.Attendance,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listMatchesBetweenTeams = `-- name: ListMatchesBetweenTeams :many
 SELECT
     m.id,
@@ -1962,181 +2143,6 @@ func (q *Queries) ListMatchesByTeam(ctx context.Context, homeTeamID sql.NullInt6
 			&i.Disputed,
 			&i.HomeGoals,
 			&i.AwayGoals,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const listMatchesForDate = `-- name: ListMatchesForDate :many
-SELECT
-    m.id,
-    m.match_date,
-    m.home_team_id,
-    m.away_team_id,
-    m.stadium_id,
-    s.name AS stadium_name,
-    ht.name AS home_team_name,
-    at.name AS away_team_name,
-    CAST(COALESCE(hg.total, 0) AS INT) AS home_goals,
-    CAST(COALESCE(ag.total, 0) AS INT) AS away_goals,
-    m.attendance
-FROM Match m
-JOIN Team ht ON m.home_team_id = ht.id
-JOIN Team at ON m.away_team_id = at.id
-JOIN Stadium s ON m.stadium_id = s.id
-LEFT JOIN LATERAL (
-    SELECT COALESCE(SUM(ps.goals_scored), 0) AS total
-    FROM PlayerStats ps
-    JOIN Player p ON p.footballer_id = ps.player_id
-    JOIN Footballer f ON f.id = p.footballer_id
-    WHERE ps.match_id = m.id AND f.team_id = m.home_team_id
-) hg ON true
-LEFT JOIN LATERAL (
-    SELECT COALESCE(SUM(ps.goals_scored), 0) AS total
-    FROM PlayerStats ps
-    JOIN Player p ON p.footballer_id = ps.player_id
-    JOIN Footballer f ON f.id = p.footballer_id
-    WHERE ps.match_id = m.id AND f.team_id = m.away_team_id
-) ag ON true
-WHERE m.match_date = $1
-ORDER BY m.id
-`
-
-type ListMatchesForDateRow struct {
-	ID           int64
-	MatchDate    time.Time
-	HomeTeamID   sql.NullInt64
-	AwayTeamID   sql.NullInt64
-	StadiumID    sql.NullInt64
-	StadiumName  string
-	HomeTeamName string
-	AwayTeamName string
-	HomeGoals    int32
-	AwayGoals    int32
-	Attendance   sql.NullInt32
-}
-
-// Report 3: matches by date
-func (q *Queries) ListMatchesForDate(ctx context.Context, matchDate time.Time) ([]ListMatchesForDateRow, error) {
-	rows, err := q.db.QueryContext(ctx, listMatchesForDate, matchDate)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []ListMatchesForDateRow
-	for rows.Next() {
-		var i ListMatchesForDateRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.MatchDate,
-			&i.HomeTeamID,
-			&i.AwayTeamID,
-			&i.StadiumID,
-			&i.StadiumName,
-			&i.HomeTeamName,
-			&i.AwayTeamName,
-			&i.HomeGoals,
-			&i.AwayGoals,
-			&i.Attendance,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const listMatchesForDateAndStadium = `-- name: ListMatchesForDateAndStadium :many
-SELECT
-    m.id,
-    m.match_date,
-    m.home_team_id,
-    m.away_team_id,
-    m.stadium_id,
-    s.name AS stadium_name,
-    ht.name AS home_team_name,
-    at.name AS away_team_name,
-    CAST(COALESCE(hg.total, 0) AS INT) AS home_goals,
-    CAST(COALESCE(ag.total, 0) AS INT) AS away_goals,
-    m.attendance
-FROM Match m
-JOIN Team ht ON m.home_team_id = ht.id
-JOIN Team at ON m.away_team_id = at.id
-JOIN Stadium s ON m.stadium_id = s.id
-LEFT JOIN LATERAL (
-    SELECT COALESCE(SUM(ps.goals_scored), 0) AS total
-    FROM PlayerStats ps
-    JOIN Player p ON p.footballer_id = ps.player_id
-    JOIN Footballer f ON f.id = p.footballer_id
-    WHERE ps.match_id = m.id AND f.team_id = m.home_team_id
-) hg ON true
-LEFT JOIN LATERAL (
-    SELECT COALESCE(SUM(ps.goals_scored), 0) AS total
-    FROM PlayerStats ps
-    JOIN Player p ON p.footballer_id = ps.player_id
-    JOIN Footballer f ON f.id = p.footballer_id
-    WHERE ps.match_id = m.id AND f.team_id = m.away_team_id
-) ag ON true
-WHERE m.match_date = $1
-  AND m.stadium_id = $2
-ORDER BY m.id
-`
-
-type ListMatchesForDateAndStadiumParams struct {
-	MatchDate time.Time
-	StadiumID sql.NullInt64
-}
-
-type ListMatchesForDateAndStadiumRow struct {
-	ID           int64
-	MatchDate    time.Time
-	HomeTeamID   sql.NullInt64
-	AwayTeamID   sql.NullInt64
-	StadiumID    sql.NullInt64
-	StadiumName  string
-	HomeTeamName string
-	AwayTeamName string
-	HomeGoals    int32
-	AwayGoals    int32
-	Attendance   sql.NullInt32
-}
-
-func (q *Queries) ListMatchesForDateAndStadium(ctx context.Context, arg ListMatchesForDateAndStadiumParams) ([]ListMatchesForDateAndStadiumRow, error) {
-	rows, err := q.db.QueryContext(ctx, listMatchesForDateAndStadium, arg.MatchDate, arg.StadiumID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []ListMatchesForDateAndStadiumRow
-	for rows.Next() {
-		var i ListMatchesForDateAndStadiumRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.MatchDate,
-			&i.HomeTeamID,
-			&i.AwayTeamID,
-			&i.StadiumID,
-			&i.StadiumName,
-			&i.HomeTeamName,
-			&i.AwayTeamName,
-			&i.HomeGoals,
-			&i.AwayGoals,
-			&i.Attendance,
 		); err != nil {
 			return nil, err
 		}

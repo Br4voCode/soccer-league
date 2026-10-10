@@ -2,12 +2,97 @@ package handler
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
+	"net/url"
 	"strconv"
+	"time"
 
 	"github.com/football-api/internal/service"
 	"github.com/go-chi/chi/v5"
 )
+
+// SchedulePeriod identifies the time window selected by the client for the
+// schedule report. The resolved from/to dates always come from the client so
+// the JSON report and its PDF export share one identical query.
+type SchedulePeriod string
+
+const (
+	SchedulePeriodDay    SchedulePeriod = "day"
+	SchedulePeriodWeek   SchedulePeriod = "week"
+	SchedulePeriodMonth  SchedulePeriod = "month"
+	SchedulePeriodYear   SchedulePeriod = "year"
+	SchedulePeriodCustom SchedulePeriod = "custom"
+)
+
+// ScheduleQuery is the parsed form of the schedule report query string.
+type ScheduleQuery struct {
+	From      time.Time
+	To        time.Time
+	Period    SchedulePeriod
+	StadiumID *int64
+}
+
+func (q ScheduleQuery) IsSingleDay() bool {
+	return q.Period == "" || q.Period == SchedulePeriodDay
+}
+
+var schedulePeriods = map[SchedulePeriod]bool{
+	SchedulePeriodDay:    true,
+	SchedulePeriodWeek:   true,
+	SchedulePeriodMonth:  true,
+	SchedulePeriodYear:   true,
+	SchedulePeriodCustom: true,
+}
+
+// parseScheduleQuery reads the shared schedule filters. `from` and `to` are
+// required; the legacy `date` parameter is accepted as from == to == date.
+func parseScheduleQuery(query url.Values) (ScheduleQuery, error) {
+	var parsed ScheduleQuery
+
+	if period := query.Get("period"); period != "" {
+		if !schedulePeriods[SchedulePeriod(period)] {
+			return parsed, fmt.Errorf("invalid period, use day, week, month, year or custom")
+		}
+		parsed.Period = SchedulePeriod(period)
+	}
+
+	fromValue := query.Get("from")
+	toValue := query.Get("to")
+	if fromValue == "" && toValue == "" {
+		if date := query.Get("date"); date != "" {
+			fromValue, toValue = date, date
+		}
+	}
+	if fromValue == "" || toValue == "" {
+		return parsed, fmt.Errorf("date or from/to is required")
+	}
+
+	from, err := time.Parse("2006-01-02", fromValue)
+	if err != nil {
+		return parsed, fmt.Errorf("invalid from format, use yyyy-mm-dd")
+	}
+	to, err := time.Parse("2006-01-02", toValue)
+	if err != nil {
+		return parsed, fmt.Errorf("invalid to format, use yyyy-mm-dd")
+	}
+	if from.After(to) {
+		return parsed, fmt.Errorf("invalid date range: from must not be after to")
+	}
+	parsed.From, parsed.To = from, to
+
+	parsed.StadiumID, err = parseOptionalInt64(query.Get("stadiumId"))
+	if err != nil {
+		return parsed, fmt.Errorf("invalid stadiumId")
+	}
+	if parsed.StadiumID == nil {
+		parsed.StadiumID, err = parseOptionalInt64(query.Get("stadium"))
+		if err != nil {
+			return parsed, fmt.Errorf("invalid stadium")
+		}
+	}
+	return parsed, nil
+}
 
 type ReportsHandler struct {
 	svc *service.ReportsService
@@ -69,24 +154,12 @@ func (h *ReportsHandler) MatchesBetweenTeams(w http.ResponseWriter, r *http.Requ
 }
 
 func (h *ReportsHandler) MatchesByDate(w http.ResponseWriter, r *http.Request) {
-	date := r.URL.Query().Get("date")
-	if date == "" {
-		http.Error(w, "date is required", http.StatusBadRequest)
-		return
-	}
-	stadiumID, err := parseOptionalInt64(r.URL.Query().Get("stadiumId"))
+	schedule, err := parseScheduleQuery(r.URL.Query())
 	if err != nil {
-		http.Error(w, "invalid stadiumId", http.StatusBadRequest)
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	if stadiumID == nil {
-		stadiumID, err = parseOptionalInt64(r.URL.Query().Get("stadium"))
-		if err != nil {
-			http.Error(w, "invalid stadium", http.StatusBadRequest)
-			return
-		}
-	}
-	rows, err := h.svc.MatchesByDate(r.Context(), date, stadiumID)
+	rows, err := h.svc.MatchesByDate(r.Context(), schedule.From, schedule.To, schedule.StadiumID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

@@ -52,13 +52,13 @@ Todas estas rutas requieren `reports:read` y responden 200 cuando la consulta se
 | --- | --- | --- | --- |
 | `/reports/standings` | `seasonId` | — | Array de equipos y puntos |
 | `/reports/matches-between-teams` | `team1`, `team2` | `seasonId` | Array de encuentros con goles y asistencias |
-| `/reports/matches-by-date` | `date` | `stadiumId`; alias `stadium` | Array de encuentros de la fecha |
+| `/reports/matches-by-date` | `from`, `to` (o `date`, equivalente a un día) | `period` (`day`, `week`, `month`, `year`, `custom`), `stadiumId`; alias `stadium` | Array de encuentros del intervalo |
 | `/reports/coaches-by-experience` | Ninguno | — | Array de entrenadores |
 | `/reports/stadiums-by-attendance` | `seasonId` | — | Array de estadios y audiencia |
 | `/reports/team-status/{teamId}` | `teamId` en ruta, `seasonId` en consulta | — | Objeto de victorias, empates y derrotas |
 | `/reports/all-star-team` | `seasonId` | — | Array de jugadores y métricas |
 
-En algunos reportes sin filas, el servicio serializa `null` en lugar de `[]`; véase el contrato de respuestas vacías. Los IDs se parsean como enteros; el parseo por sí mismo no verifica la existencia de la entidad. Una temporada sin coincidencias puede devolver resultados de cero o vacíos según la consulta. El formato deportivo de fecha es `YYYY-MM-DD`.
+En algunos reportes sin filas, el servicio serializa `null` en lugar de `[]`; véase el contrato de respuestas vacías. Los IDs se parsean como enteros; el parseo por sí mismo no verifica la existencia de la entidad. Una temporada sin coincidencias puede devolver resultados de cero o vacíos según la consulta. El formato deportivo de fecha es `YYYY-MM-DD`. En `/reports/matches-by-date` los límites `from` y `to` son inclusivos y `date` equivale a `from = to = date`; el cliente resuelve el rango del periodo seleccionado, por lo que el PDF recibe exactamente los mismos parámetros que la tabla.
 
 ## Exportación PDF
 
@@ -68,7 +68,7 @@ En algunos reportes sin filas, el servicio serializa `null` en lugar de `[]`; v�
 | --- | --- |
 | `standings` | `seasonId` |
 | `matches-between-teams` | `team1`, `team2`, `seasonId` opcional |
-| `matches-by-date` | `date`, `stadiumId` opcional |
+| `matches-by-date` | `from`, `to` (o `date`), `period` opcional, `stadiumId` opcional |
 | `coaches-by-experience` | Ninguno |
 | `stadiums-by-attendance` | `seasonId` |
 | `team-status` | `teamId`, `seasonId`, ambos en consulta |
