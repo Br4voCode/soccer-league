@@ -76,10 +76,11 @@ export const MatchDetailContainer = ({ matchId }: MatchDetailContainerProps) => 
     queryFn: () => teamsApiService.getTeams(),
   });
 
-  const { data: matchStats = [] } = useQuery({
+  const { data: matchStatsData } = useQuery({
     queryKey: ["player-stats", matchId],
     queryFn: () => playerStatsApiService.getPlayerStatsByMatch(matchId),
   });
+  const matchStats = matchStatsData ?? [];
 
   const { data: allPlayers = [] } = useQuery({
     queryKey: ["players"],
