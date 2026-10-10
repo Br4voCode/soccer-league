@@ -102,7 +102,7 @@ func (s *PlayerStatsService) List(ctx context.Context, limit, offset int) ([]*Pl
 	if err != nil {
 		return nil, err
 	}
-	var stats []*PlayerStat
+	stats := make([]*PlayerStat, 0, len(rows))
 	for _, row := range rows {
 		stats = append(stats, playerStatFromStore(row))
 	}
@@ -115,7 +115,7 @@ func (s *PlayerStatsService) ListByMatch(ctx context.Context, matchID int64) ([]
 	if err != nil {
 		return nil, err
 	}
-	var stats []*PlayerStat
+	stats := make([]*PlayerStat, 0, len(rows))
 	for _, row := range rows {
 		stats = append(stats, playerStatFromStore(row))
 	}

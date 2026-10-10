@@ -161,7 +161,7 @@ func (s *ReportsService) Standings(ctx context.Context, seasonID int64) ([]*Stan
 	if err != nil {
 		return nil, err
 	}
-	var result []*StandingRow
+	result := make([]*StandingRow, 0, len(rows))
 	for _, row := range rows {
 		result = append(result, &StandingRow{
 			TeamID: row.TeamID,
@@ -290,7 +290,7 @@ func (s *ReportsService) CoachesByExperience(ctx context.Context) ([]*CoachRepor
 	if err != nil {
 		return nil, err
 	}
-	var result []*CoachReportRow
+	result := make([]*CoachReportRow, 0, len(rows))
 	for _, row := range rows {
 		result = append(result, &CoachReportRow{
 			ID:               row.ID,
@@ -310,7 +310,7 @@ func (s *ReportsService) StadiumsByAttendance(ctx context.Context, seasonID int6
 	if err != nil {
 		return nil, err
 	}
-	var result []*StadiumAttendanceRow
+	result := make([]*StadiumAttendanceRow, 0, len(rows))
 	for _, row := range rows {
 		capacity := fromNullInt32(row.Capacity)
 		totalAttendance := anyToInt64(row.TotalAttendance)
@@ -355,7 +355,7 @@ func (s *ReportsService) TeamStatus(ctx context.Context, teamID, seasonID int64)
 }
 
 func (s *ReportsService) AllStarTeam(ctx context.Context, seasonID int64) ([]*AllStarRow, error) {
-	var result []*AllStarRow
+	result := make([]*AllStarRow, 0, 6)
 
 	goalkeeper, err := s.store.GetBestGoalkeeper(ctx, int64ToNullInt64(seasonID))
 	if err != nil {
