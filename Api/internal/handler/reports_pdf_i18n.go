@@ -54,6 +54,14 @@ var pdfStrings = map[string]map[string]string{
 		"filter.team":         "Equipo:",
 		"filter.all_seasons":  "Todas las temporadas",
 		"filter.all_stadiums": "Todos los estadios",
+		"filter.period":       "Periodo:",
+		"filter.range":        "Rango:",
+
+		"period.day":    "Día",
+		"period.week":   "Semana",
+		"period.month":  "Mes",
+		"period.year":   "Año",
+		"period.custom": "Rango personalizado",
 
 		"stat.wins":     "Victorias",
 		"stat.draws":    "Empates",
@@ -117,6 +125,14 @@ var pdfStrings = map[string]map[string]string{
 		"filter.team":         "Team:",
 		"filter.all_seasons":  "All seasons",
 		"filter.all_stadiums": "All stadiums",
+		"filter.period":       "Period:",
+		"filter.range":        "Range:",
+
+		"period.day":    "Day",
+		"period.week":   "Week",
+		"period.month":  "Month",
+		"period.year":   "Year",
+		"period.custom": "Custom range",
 
 		"stat.wins":     "Wins",
 		"stat.draws":    "Draws",

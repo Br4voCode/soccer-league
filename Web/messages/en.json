@@ -177,11 +177,21 @@
     "schedule": {
       "title": "Schedule and venues",
       "selectDate": "Select a date",
+      "selectRange": "Select a date range to view scheduled matches.",
+      "period": "Period",
+      "periodDay": "Day",
+      "periodWeek": "Week",
+      "periodMonth": "Month",
+      "periodYear": "Year",
+      "periodCustom": "Custom range",
+      "fromDate": "From",
+      "toDate": "To",
       "allStadiums": "All stadiums",
       "empty": "Select a date to view scheduled matches.",
       "error": "Unable to load scheduled matches. Please try again.",
       "attendance": "Attendance",
-      "noMatches": "There are no matches on this date"
+      "noMatches": "There are no matches on this date",
+      "noMatchesPeriod": "There are no matches in the selected period"
     },
     "teamStatus": {
       "title": "Team status",

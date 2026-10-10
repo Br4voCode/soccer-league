@@ -189,34 +189,33 @@ func (h *ReportsHandler) pdfMatchesBetweenTeams(r *http.Request, lang string) (*
 	return doc, pdfFilename(pt(lang, "file.head_to_head")), http.StatusOK, nil
 }
 
+// scheduleFilterLabels renders the period and range chips of the schedule PDF
+// so they mirror exactly the filters applied by the user in the report.
+func scheduleFilterLabels(schedule ScheduleQuery, lang string) []string {
+	from := schedule.From.Format("2006-01-02")
+	if schedule.IsSingleDay() {
+		return []string{pt(lang, "filter.date") + " " + pdfDate(from, lang)}
+	}
+	return []string{
+		pt(lang, "filter.period") + " " + pt(lang, "period."+string(schedule.Period)),
+		pt(lang, "filter.range") + " " + pdfDate(from, lang) + " - " + pdfDate(schedule.To.Format("2006-01-02"), lang),
+	}
+}
+
 func (h *ReportsHandler) pdfMatchesByDate(r *http.Request, lang string) (*pdf.Document, string, int, error) {
-	query := r.URL.Query()
-
-	date := query.Get("date")
-	if date == "" {
-		return nil, "", http.StatusBadRequest, errors.New("date is required")
-	}
-	if _, err := time.Parse("2006-01-02", date); err != nil {
-		return nil, "", http.StatusBadRequest, errors.New("invalid date format, use yyyy-mm-dd")
+	schedule, err := parseScheduleQuery(r.URL.Query())
+	if err != nil {
+		return nil, "", http.StatusBadRequest, errors.New(err.Error())
 	}
 
-	var stadiumID *int64
-	if value := query.Get("stadiumId"); value != "" {
-		parsed, err := strconv.ParseInt(value, 10, 64)
-		if err != nil {
-			return nil, "", http.StatusBadRequest, errors.New("invalid stadiumId")
-		}
-		stadiumID = &parsed
-	}
-
-	rows, err := h.svc.MatchesByDate(r.Context(), date, stadiumID)
+	rows, err := h.svc.MatchesByDate(r.Context(), schedule.From, schedule.To, schedule.StadiumID)
 	if err != nil {
 		return nil, "", http.StatusInternalServerError, pdfReportError(err)
 	}
 
-	filters := []string{pt(lang, "filter.date") + " " + pdfDate(date, lang)}
-	if stadiumID != nil {
-		filters = append(filters, pt(lang, "filter.stadium")+" "+h.svc.StadiumLabel(r.Context(), *stadiumID, lang))
+	filters := scheduleFilterLabels(schedule, lang)
+	if schedule.StadiumID != nil {
+		filters = append(filters, pt(lang, "filter.stadium")+" "+h.svc.StadiumLabel(r.Context(), *schedule.StadiumID, lang))
 	} else {
 		filters = append(filters, pt(lang, "filter.all_stadiums"))
 	}

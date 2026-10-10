@@ -33,6 +33,15 @@ export interface MatchByDateRow {
   attendance: number;
 }
 
+export type SchedulePeriod = "day" | "week" | "month" | "year" | "custom";
+
+export interface ScheduleParams {
+  period: SchedulePeriod;
+  from: string;
+  to: string;
+  stadiumId?: number;
+}
+
 export interface CoachExperience {
   id: number;
   team_id: number;

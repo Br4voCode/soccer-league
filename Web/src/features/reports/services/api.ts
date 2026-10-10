@@ -4,6 +4,7 @@ import type {
   StandingRow,
   HeadToHeadMatch,
   MatchByDateRow,
+  ScheduleParams,
   CoachExperience,
   StadiumAttendance,
   TeamStatusReport,
@@ -19,8 +20,11 @@ class ReportsApiService {
     return apiRequest<HeadToHeadMatch[]>(API_ROUTES.reports.matchesBetweenTeams(team1, team2, seasonId));
   }
 
-  async getSchedule(date: string, stadiumId?: number): Promise<MatchByDateRow[]> {
-    return apiRequest<MatchByDateRow[]>(API_ROUTES.reports.matchesByDate(date, stadiumId));
+  async getSchedule(params: ScheduleParams): Promise<MatchByDateRow[]> {
+    const { period, from, to, stadiumId } = params;
+    return apiRequest<MatchByDateRow[]>(
+      API_ROUTES.reports.matchesByDate({ period, from, to, stadiumId }),
+    );
   }
 
   async getCoachExperience(): Promise<CoachExperience[]> {
@@ -47,8 +51,9 @@ class ReportsApiService {
     return API_ROUTES.reports.pdf("matches-between-teams", { team1, team2, seasonId });
   }
 
-  schedulePdfUrl(date: string, stadiumId?: number): string {
-    return API_ROUTES.reports.pdf("matches-by-date", { date, stadiumId });
+  schedulePdfUrl(params: ScheduleParams): string {
+    const { period, from, to, stadiumId } = params;
+    return API_ROUTES.reports.pdf("matches-by-date", { period, from, to, stadiumId });
   }
 
   coachExperiencePdfUrl(): string {

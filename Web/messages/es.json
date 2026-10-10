@@ -177,11 +177,21 @@
     "schedule": {
       "title": "Calendario y sedes",
       "selectDate": "Selecciona una fecha",
+      "selectRange": "Selecciona un rango de fechas para ver los partidos programados.",
+      "period": "Periodo",
+      "periodDay": "Día",
+      "periodWeek": "Semana",
+      "periodMonth": "Mes",
+      "periodYear": "Año",
+      "periodCustom": "Rango personalizado",
+      "fromDate": "Desde",
+      "toDate": "Hasta",
       "allStadiums": "Todos los estadios",
       "empty": "Selecciona una fecha para ver los partidos programados.",
       "error": "Error al cargar los partidos. Intenta de nuevo.",
       "attendance": "Asistencia",
-      "noMatches": "No hay partidos en esta fecha"
+      "noMatches": "No hay partidos en esta fecha",
+      "noMatchesPeriod": "No hay partidos en el periodo seleccionado"
     },
     "teamStatus": {
       "title": "Estado del equipo",

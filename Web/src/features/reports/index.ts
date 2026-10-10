@@ -1,4 +1,5 @@
 export * from "./types";
+export * from "./utils";
 export * from "./services/api";
 export { StandingsReport } from "./containers/StandingsReport";
 export { CoachExperienceReport } from "./containers/CoachExperienceReport";
